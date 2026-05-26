@@ -357,7 +357,6 @@ section.block { margin-bottom: 44px; }
   .sidebar {
     position: sticky; top: 0; z-index: 10;
     height: auto; flex-direction: row; align-items: center;
-    /* iOS notch / Dynamic Island — push down below status bar */
     padding-top: max(12px, env(safe-area-inset-top));
     padding-bottom: 12px;
     padding-left: max(16px, env(safe-area-inset-left));
@@ -366,9 +365,28 @@ section.block { margin-bottom: 44px; }
   }
   .brand { padding: 0 12px 0 0; border-right: 1px solid var(--line); margin-right: 8px; }
   .brand-version { display: none; }
-  .nav { flex-direction: row; gap: 4px; flex-wrap: nowrap; }
+  .nav { flex-direction: row; gap: 6px; flex-wrap: nowrap; }
   .nav-eyebrow { display: none; }
   .nav-spacer { display: none; }
+  /* Nav items: auto width in a row, gap between label + count */
+  .nav-item {
+    width: auto;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 7px 12px;
+    font-size: 13px;
+  }
+  /* Count becomes a small rounded badge */
+  .nav-item .count {
+    background: var(--line);
+    border-radius: 999px;
+    padding: 1px 6px;
+    min-width: 18px;
+    text-align: center;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .nav-item.active .count { background: var(--line-2); }
   .sidebar-foot { margin-left: auto; }
   .theme-toggle span { display: none; }
   main {
@@ -432,7 +450,7 @@ section.block { margin-bottom: 44px; }
 /* ── Life Dashboard v1.0.0 ── */
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
-const VERSION = "v1.0.5";
+const VERSION = "v1.0.6";
 
 const SUPABASE_URL = "https://eefycklvsmuqhdckymmw.supabase.co";
 const SUPABASE_KEY = "sb_publishable_FMQM5VuVnpCB2Uy3JR0Hwg_F27EuqfM";
