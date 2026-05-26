@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>Life Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -82,13 +85,6 @@ input:focus, textarea:focus, select:focus { outline: none; }
   transition: border-color .15s ease, background .15s ease, color .15s ease;
 }
 .theme-toggle:hover { border-color: var(--line-2); background: var(--surface-2); color: var(--ink); }
-.reset-link {
-  font-size: 11px; color: var(--muted-2); text-align: center;
-  background: transparent; border: 0; padding: 2px;
-  cursor: pointer; letter-spacing: 0.02em;
-  transition: color .15s ease;
-}
-.reset-link:hover { color: var(--warn); }
 
 /* ─── main ─── */
 main { padding: 32px 48px 80px; max-width: 1240px; }
@@ -327,40 +323,6 @@ section.block { margin-bottom: 44px; }
 }
 @keyframes slideUp { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
-/* ─── setup screen ─── */
-.setup-wrap {
-  min-height: 100vh; display: flex; align-items: center; justify-content: center;
-  padding: 40px 20px;
-}
-.setup-card {
-  width: 100%; max-width: 560px;
-  background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--radius-lg); padding: 40px 40px 36px;
-}
-.setup-brand { font-family: var(--font-serif); font-size: 24px; letter-spacing: -0.02em; margin-bottom: 4px; }
-.setup-brand em { color: var(--accent); font-style: italic; }
-.setup-sub { font-size: 13px; color: var(--muted); margin-bottom: 32px; }
-.setup-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-.setup-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.setup-input {
-  background: var(--surface-2); border: 1px solid var(--line);
-  border-radius: 10px; padding: 10px 14px; font-size: 13px;
-  font-family: var(--font-mono); color: var(--ink);
-  transition: border-color .15s ease; width: 100%;
-}
-.setup-input:focus { border-color: var(--accent); outline: none; }
-.setup-input::placeholder { color: var(--muted-2); font-family: var(--font-mono); }
-.setup-sql-toggle { background: transparent; border: 0; color: var(--accent); font-size: 12.5px; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; margin-bottom: 12px; display: inline-block; }
-.setup-sql {
-  background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px;
-  padding: 14px 16px; font-family: var(--font-mono); font-size: 11.5px;
-  color: var(--ink-2); line-height: 1.7; white-space: pre; overflow-x: auto;
-  margin-bottom: 20px; max-height: 260px; overflow-y: auto;
-}
-.setup-footer { display: flex; justify-content: flex-end; margin-top: 8px; }
-.btn-accent { background: var(--accent); color: #fff; border: 0; border-radius: 999px; padding: 10px 24px; font-size: 13px; font-weight: 500; transition: opacity .15s ease; }
-.btn-accent:hover { opacity: 0.88; }
-.btn-accent:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ─── responsive ─── */
 @media (max-width: 1100px) {
@@ -393,41 +355,13 @@ section.block { margin-bottom: 44px; }
 /* ── Life Dashboard v1.0.0 ── */
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
-const VERSION = "v1.0.1";
+const VERSION = "v1.0.2";
 
-const SB_URL_KEY  = "ld-sb-url";
-const SB_KEY_KEY  = "ld-sb-key";
-const THEME_KEY   = "ld-theme";
+const SUPABASE_URL = "https://eefycklvsmuqhdckymmw.supabase.co";
+const SUPABASE_KEY = "sb_publishable_FMQM5VuVnpCB2Uy3JR0Hwg_F27EuqfM";
+const THEME_KEY    = "ld-theme";
 const WORK_TAGS   = ["tech-viz","pipeline","vendor","review","hiring","bug","color"];
 
-const SETUP_SQL = `CREATE TABLE IF NOT EXISTS public.tasks (
-  id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  kind       TEXT        NOT NULL CHECK (kind IN ('personal','work')),
-  title      TEXT        NOT NULL,
-  pri        TEXT        NOT NULL DEFAULT 'med',
-  due        DATE,
-  done       BOOLEAN     NOT NULL DEFAULT false,
-  tags       TEXT[]      NOT NULL DEFAULT '{}',
-  note       TEXT        NOT NULL DEFAULT '',
-  blocked    BOOLEAN     NOT NULL DEFAULT false,
-  blocked_by TEXT        NOT NULL DEFAULT '',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS public.research (
-  id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  name       TEXT        NOT NULL,
-  status     TEXT        NOT NULL DEFAULT 'active',
-  progress   INTEGER     NOT NULL DEFAULT 0,
-  tags       TEXT[]      NOT NULL DEFAULT '{}',
-  note       TEXT        NOT NULL DEFAULT '',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-ALTER TABLE public.tasks    DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.research DISABLE ROW LEVEL SECURITY;`;
 
 /* ─────────────── date helpers ─────────────── */
 
@@ -533,73 +467,10 @@ const Check = ({ on, onClick, ariaLabel }) => (
   </button>
 );
 
-/* ─────────────── setup screen ─────────────── */
-
-function SetupScreen({ onConnect }) {
-  const [url, setUrl]         = useState("");
-  const [key, setKey]         = useState("");
-  const [showSql, setShowSql] = useState(false);
-  const [busy, setBusy]       = useState(false);
-  const [err, setErr]         = useState("");
-
-  async function submit(e) {
-    e.preventDefault();
-    const u = url.trim(), k = key.trim();
-    if (!u || !k) { setErr("Both fields are required."); return; }
-    setBusy(true); setErr("");
-    try {
-      const client = window.supabase.createClient(u, k);
-      const { error } = await client.from("tasks").select("id").limit(1);
-      if (error) throw error;
-      localStorage.setItem(SB_URL_KEY, u);
-      localStorage.setItem(SB_KEY_KEY, k);
-      onConnect();
-    } catch (ex) {
-      setErr(ex.message || "Could not connect — check your URL and key.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="setup-wrap">
-      <div className="setup-card">
-        <div className="setup-brand">Atelier<em>.</em></div>
-        <div className="setup-sub">Connect your Supabase project to get started — data stays yours.</div>
-
-        <form onSubmit={submit}>
-          <div className="setup-field">
-            <label className="setup-label">Supabase Project URL</label>
-            <input className="setup-input" type="url" value={url} onChange={e => setUrl(e.target.value)}
-              placeholder="https://xxxxxxxxxxxx.supabase.co" autoFocus />
-          </div>
-          <div className="setup-field">
-            <label className="setup-label">Anon Public Key</label>
-            <input className="setup-input" type="text" value={key} onChange={e => setKey(e.target.value)}
-              placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9…" />
-          </div>
-
-          {err && <div style={{color:"var(--warn)",fontSize:"12.5px",marginBottom:"12px"}}>{err}</div>}
-
-          <button type="button" className="setup-sql-toggle" onClick={() => setShowSql(s => !s)}>
-            {showSql ? "Hide" : "Show"} required SQL schema
-          </button>
-          {showSql && <pre className="setup-sql">{SETUP_SQL}</pre>}
-
-          <div className="setup-footer">
-            <button type="submit" className="btn-accent" disabled={busy}>
-              {busy ? "Connecting…" : "Connect →"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
 
 /* ─────────────── sidebar ─────────────── */
 
-function Sidebar({ theme, onToggleTheme, view, setView, counts, onReset }) {
+function Sidebar({ theme, onToggleTheme, view, setView, counts }) {
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -626,7 +497,6 @@ function Sidebar({ theme, onToggleTheme, view, setView, counts, onReset }) {
           {theme === "dark" ? <IconSun /> : <IconMoon />}
           <span>{theme === "dark" ? "Light paper" : "Quiet dark"}</span>
         </button>
-        <button className="reset-link" onClick={onReset}>Disconnect Supabase</button>
       </div>
     </aside>
   );
@@ -1092,7 +962,7 @@ function ResearchView({ research, onSave, onDelete, openId, setOpenId, onAddCapt
 
 /* ─────────────── dashboard (connected) ─────────────── */
 
-function Dashboard({ db, onReset }) {
+function Dashboard({ db }) {
   const [theme, setTheme]   = useState(() => localStorage.getItem(THEME_KEY) || "dark");
   const [view, setView]     = useState("today");
   const [tasks, setTasks]   = useState([]);
@@ -1276,7 +1146,7 @@ function Dashboard({ db, onReset }) {
   return (
     <div className="app">
       <Sidebar theme={theme} onToggleTheme={() => setTheme(t => t === "dark" ? "light" : "dark")}
-        view={view} setView={setView} counts={counts} onReset={onReset} />
+        view={view} setView={setView} counts={counts} />
       <main>
         {view === "today" && (
           <TodayView
@@ -1307,32 +1177,10 @@ function Dashboard({ db, onReset }) {
 
 /* ─────────────── root app ─────────────── */
 
+const _db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 function App() {
-  const [db, setDb] = useState(null);
-
-  useEffect(() => {
-    const url = localStorage.getItem(SB_URL_KEY);
-    const key = localStorage.getItem(SB_KEY_KEY);
-    if (url && key) {
-      setDb(window.supabase.createClient(url, key));
-    }
-  }, []);
-
-  function handleConnect() {
-    const url = localStorage.getItem(SB_URL_KEY);
-    const key = localStorage.getItem(SB_KEY_KEY);
-    setDb(window.supabase.createClient(url, key));
-  }
-
-  function handleReset() {
-    if (!confirm("Disconnect Supabase? You'll need to re-enter your credentials.")) return;
-    localStorage.removeItem(SB_URL_KEY);
-    localStorage.removeItem(SB_KEY_KEY);
-    setDb(null);
-  }
-
-  if (!db) return <SetupScreen onConnect={handleConnect} />;
-  return <Dashboard db={db} onReset={handleReset} />;
+  return <Dashboard db={_db} />;
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
