@@ -357,14 +357,17 @@ section.block { margin-bottom: 44px; }
   .sidebar {
     position: sticky; top: 0; z-index: 10;
     height: auto; flex-direction: row; align-items: center;
-    padding-top: max(12px, env(safe-area-inset-top));
-    padding-bottom: 12px;
-    padding-left: max(16px, env(safe-area-inset-left));
-    padding-right: max(16px, env(safe-area-inset-right));
+    /* Base padding — Safari browser mode (safe-area is handled by browser chrome) */
+    padding: 10px max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
     border-right: 0; border-bottom: 1px solid var(--line);
   }
+  /* PWA standalone only — add safe-area-inset-top so content clears the status bar */
+  @media (display-mode: standalone) {
+    .sidebar { padding-top: max(12px, env(safe-area-inset-top)); }
+  }
+  /* Hide brand sub-text on mobile — keeps the nav a single consistent height */
+  .brand-sub, .brand-version { display: none; }
   .brand { padding: 0 12px 0 0; border-right: 1px solid var(--line); margin-right: 8px; }
-  .brand-version { display: none; }
   .nav { flex-direction: row; gap: 6px; flex-wrap: nowrap; }
   .nav-eyebrow { display: none; }
   .nav-spacer { display: none; }
@@ -450,7 +453,7 @@ section.block { margin-bottom: 44px; }
 /* ── Life Dashboard v1.0.0 ── */
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
-const VERSION = "v1.0.6";
+const VERSION = "v1.0.7";
 
 const SUPABASE_URL = "https://eefycklvsmuqhdckymmw.supabase.co";
 const SUPABASE_KEY = "sb_publishable_FMQM5VuVnpCB2Uy3JR0Hwg_F27EuqfM";
