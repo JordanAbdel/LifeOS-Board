@@ -2,11 +2,26 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <title>Life Dashboard</title>
+
+<!-- PWA -->
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#1a1814" />
+<meta name="mobile-web-app-capable" content="yes" />
+
+<!-- iOS PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Atelier" />
+<link rel="apple-touch-icon" href="/icons/icon-180.png" />
+
+<!-- Favicon -->
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=Geist+Mono:wght@400;500&family=Geist:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -330,16 +345,63 @@ section.block { margin-bottom: 44px; }
   .pq li { grid-template-columns: 24px 90px 1fr 80px 90px; }
   .pq li .pq-act { display: none; }
 }
+
+/* Tablet + large phones */
 @media (max-width: 820px) {
   .app { grid-template-columns: 1fr; }
-  .sidebar { position: static; height: auto; flex-direction: row; align-items: center; padding: 16px; border-right: 0; border-bottom: 1px solid var(--line); }
-  .nav { flex-direction: row; gap: 4px; flex-wrap: wrap; }
-  .nav-eyebrow, .nav-spacer, .sidebar-foot { display: none; }
-  main { padding: 24px 20px 60px; }
+  .sidebar {
+    position: sticky; top: 0; z-index: 10;
+    height: auto; flex-direction: row; align-items: center;
+    padding: 12px 16px;
+    border-right: 0; border-bottom: 1px solid var(--line);
+    /* iOS safe area */
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  .brand { padding: 0 12px 0 0; border-right: 1px solid var(--line); margin-right: 8px; }
+  .brand-version { display: none; }
+  .nav { flex-direction: row; gap: 4px; flex-wrap: nowrap; }
+  .nav-eyebrow { display: none; }
+  .nav-spacer { display: none; }
+  .sidebar-foot { margin-left: auto; }
+  .theme-toggle span { display: none; }   /* icon only on mobile */
+  main {
+    padding: 20px 16px 100px;
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-bottom: max(100px, calc(80px + env(safe-area-inset-bottom)));
+  }
   .hub-grid { grid-template-columns: 1fr; }
   .research-grid { grid-template-columns: 1fr; }
   .capture { min-width: 0; width: 100%; }
-  .page-head { flex-direction: column; align-items: stretch; }
+  .page-head { flex-direction: column; align-items: stretch; gap: 16px; }
+  .hero { font-size: 26px; }
+  .pq li {
+    grid-template-columns: 20px 1fr;
+    grid-template-rows: auto auto;
+    gap: 4px 10px;
+  }
+  .pq .rank { grid-row: 1; }
+  .pq-pill { display: none; }
+  .pq-title { grid-column: 2; grid-row: 1; }
+  .pq-source { grid-column: 2; grid-row: 2; }
+  .pq-age, .pq-due, .pq-act { display: none; }
+}
+
+/* Small phones — iPhone SE (375px) through iPhone 15 Pro Max (430px) */
+@media (max-width: 430px) {
+  .hero { font-size: 22px; line-height: 1.2; }
+  .section-title { font-size: 17px; }
+  .task-main { grid-template-columns: 22px 1fr auto 14px; gap: 8px; }
+  .due { display: none; }               /* hidden at narrowest — in editor instead */
+  .filter-chips { gap: 4px; }
+  .chip { padding: 5px 9px; font-size: 11px; }
+  .ed-grid { grid-template-columns: 1fr; }  /* stack editor fields */
+  .rcard { padding: 14px 14px 10px; }
+  .rcard-name { font-size: 15px; }
+  .task-col { padding: 14px 14px 6px; }
+  .pq { padding: 4px 12px; }
+  .pq li { padding: 10px 6px; }
 }
 </style>
 </head>
@@ -355,7 +417,7 @@ section.block { margin-bottom: 44px; }
 /* ── Life Dashboard v1.0.0 ── */
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
-const VERSION = "v1.0.2";
+const VERSION = "v1.0.3";
 
 const SUPABASE_URL = "https://eefycklvsmuqhdckymmw.supabase.co";
 const SUPABASE_KEY = "sb_publishable_FMQM5VuVnpCB2Uy3JR0Hwg_F27EuqfM";
@@ -1184,6 +1246,12 @@ function App() {
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
 </script>
 </body>
 </html>
