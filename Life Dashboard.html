@@ -1,0 +1,1341 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Life Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=Geist+Mono:wght@400;500&family=Geist:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+/* ─── tokens ─── */
+:root {
+  --bg: #faf7f2; --surface: #ffffff; --surface-2: #f4efe5;
+  --ink: #1a1814; --ink-2: #3a342c; --muted: #8a8377; --muted-2: #b8b1a3;
+  --line: #ebe5d6; --line-2: #e0d9c7;
+  --accent: #c96442; --accent-soft: #f4e3d8; --accent-ink: #7a3a22;
+  --warn: #b44d28; --warn-soft: #f7dccb;
+  --ok: #5f7a4a; --ok-soft: #e6ead9;
+  --font-serif: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  --font-sans:  "Geist", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:  "Geist Mono", ui-monospace, monospace;
+  --radius-sm: 8px; --radius: 14px; --radius-lg: 20px;
+}
+[data-theme="dark"] {
+  --bg: #1a1814; --surface: #221f1a; --surface-2: #2a2620;
+  --ink: #f5f1e8; --ink-2: #d8d2c4; --muted: #948c7e; --muted-2: #6b6458;
+  --line: #2f2b25; --line-2: #3a352d;
+  --accent: #d97757; --accent-soft: #3a261d; --accent-ink: #efc1a8;
+  --warn: #d96a3e; --warn-soft: #3d1f12;
+  --ok: #8aa674; --ok-soft: #232a1d;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-sans); font-size: 14px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background .35s ease, color .35s ease;
+}
+button { font-family: inherit; cursor: pointer; }
+input, textarea, button, select { color: inherit; }
+input:focus, textarea:focus, select:focus { outline: none; }
+::selection { background: var(--accent-soft); color: var(--accent-ink); }
+
+/* ─── shell ─── */
+.app { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+.sidebar {
+  position: sticky; top: 0; height: 100vh;
+  border-right: 1px solid var(--line); background: var(--bg);
+  display: flex; flex-direction: column; padding: 28px 18px 20px;
+  transition: background .35s ease, border-color .35s ease;
+}
+.brand { display: flex; align-items: baseline; gap: 8px; padding: 0 8px 24px; }
+.brand-mark { font-family: var(--font-serif); font-size: 22px; letter-spacing: -0.02em; color: var(--ink); }
+.brand-mark em { color: var(--accent); font-style: italic; font-weight: 400; }
+.brand-sub { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.brand-version {
+  font-family: var(--font-mono); font-size: 10px; color: var(--muted-2);
+  letter-spacing: 0.04em; margin-top: 2px;
+}
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-eyebrow {
+  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); padding: 14px 10px 8px;
+}
+.nav-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  color: var(--ink-2); padding: 9px 10px; border-radius: 8px;
+  font-size: 13px; border: 0; background: transparent; text-align: left; width: 100%;
+  transition: background .15s ease, color .15s ease;
+}
+.nav-item:hover { background: var(--surface-2); color: var(--ink); }
+.nav-item.active { background: var(--surface-2); color: var(--ink); }
+.nav-item .count { font-family: var(--font-mono); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.nav-spacer { flex: 1; }
+.sidebar-foot { display: flex; flex-direction: column; gap: 8px; }
+.theme-toggle {
+  border: 1px solid var(--line); background: transparent; color: var(--ink-2);
+  padding: 8px 12px; border-radius: 999px; font-size: 12px;
+  display: flex; align-items: center; gap: 8px;
+  transition: border-color .15s ease, background .15s ease, color .15s ease;
+}
+.theme-toggle:hover { border-color: var(--line-2); background: var(--surface-2); color: var(--ink); }
+.reset-link {
+  font-size: 11px; color: var(--muted-2); text-align: center;
+  background: transparent; border: 0; padding: 2px;
+  cursor: pointer; letter-spacing: 0.02em;
+  transition: color .15s ease;
+}
+.reset-link:hover { color: var(--warn); }
+
+/* ─── main ─── */
+main { padding: 32px 48px 80px; max-width: 1240px; }
+.page-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  flex-wrap: wrap; gap: 24px 32px; margin-bottom: 28px;
+}
+.page-head > :first-child { flex: 1 1 420px; min-width: 0; }
+.page-head > .capture { flex: 0 1 460px; }
+.hero { font-family: var(--font-serif); font-size: 36px; line-height: 1.1; letter-spacing: -0.02em; font-weight: 400; margin: 0 0 6px; }
+.hero em { font-style: italic; color: var(--accent); }
+.hero-meta { font-size: 13px; color: var(--muted); }
+.hero-meta .dot { display: inline-block; width: 4px; height: 4px; border-radius: 999px; background: var(--muted-2); margin: 0 8px; vertical-align: middle; }
+
+/* ─── capture ─── */
+.capture {
+  display: flex; align-items: stretch; gap: 0;
+  border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface); overflow: hidden;
+  min-width: 0; width: 100%; max-width: 520px;
+  transition: border-color .15s ease;
+}
+.capture:focus-within { border-color: var(--accent); }
+.capture .cap-icon { display: flex; align-items: center; padding: 0 6px 0 16px; color: var(--muted); }
+.capture input { flex: 1; border: 0; background: transparent; padding: 10px 12px; font-size: 13px; min-width: 0; }
+.capture input::placeholder { color: var(--muted-2); }
+.capture select {
+  border: 0; background: transparent;
+  border-left: 1px solid var(--line); padding: 0 12px;
+  font-size: 12px; color: var(--muted);
+  appearance: none; -webkit-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 14px) 50%, calc(100% - 10px) 50%;
+  background-size: 4px 4px, 4px 4px; background-repeat: no-repeat;
+  padding-right: 28px;
+}
+.capture select option { background: var(--surface); color: var(--ink); }
+.capture .cap-submit {
+  border: 0; background: var(--ink); color: var(--bg);
+  padding: 0 18px; font-size: 13px; font-weight: 500;
+  transition: background .15s ease;
+}
+.capture .cap-submit:hover { background: var(--accent); color: #fff; }
+
+/* ─── section ─── */
+section.block { margin-bottom: 44px; }
+.eyebrow {
+  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+  margin-bottom: 8px; display: flex; align-items: baseline; gap: 12px;
+}
+.eyebrow .eyebrow-meta { color: var(--muted-2); letter-spacing: 0; text-transform: none; font-family: var(--font-mono); font-size: 11px; }
+.section-title { font-family: var(--font-serif); font-size: 19px; letter-spacing: -0.01em; font-weight: 500; margin: 0 0 16px; }
+.section-title em { font-style: italic; color: var(--accent); font-weight: 400; }
+
+/* ─── card ─── */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); transition: border-color .15s ease, background .35s ease; }
+.card.lift { transition: border-color .15s ease, transform .1s ease, background .35s ease; }
+.card.lift:hover { border-color: var(--line-2); transform: translateY(-1px); }
+
+/* ─── priority queue ─── */
+.pq { padding: 6px 20px; }
+.pq ol { list-style: none; margin: 0; padding: 0; }
+.pq li {
+  display: grid;
+  grid-template-columns: 28px 100px 1fr 100px 120px 90px;
+  gap: 12px; align-items: center;
+  padding: 12px 10px; margin: 0 -10px;
+  border-top: 1px solid var(--line);
+  border-radius: 10px; font-size: 13.5px;
+}
+.pq li:first-child { border-top: 0; }
+.pq li.overdue { background: linear-gradient(90deg, var(--warn-soft) 0%, transparent 80%); }
+.pq li.overdue + li { border-top-color: transparent; }
+.pq li.blocked .pq-title { color: var(--muted); }
+.pq .rank { font-family: var(--font-mono); color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.pq-pill {
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px; width: max-content;
+}
+.pq-pill.over { color: var(--warn); border-color: var(--warn); background: var(--warn-soft); }
+.pq-pill.due  { color: var(--accent-ink); border-color: var(--accent); background: var(--accent-soft); }
+.pq-pill.blk  { color: var(--muted); border-style: dashed; }
+.pq-title { color: var(--ink); }
+.pq-source { font-size: 11px; color: var(--muted); font-family: var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; }
+.pq-age { font-family: var(--font-mono); font-size: 11px; color: var(--muted-2); font-variant-numeric: tabular-nums; }
+.pq-due { font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; }
+.pq-due.over { color: var(--warn); }
+.pq-act { text-align: right; }
+.pq-act button {
+  background: transparent; border: 0; color: var(--muted);
+  padding: 4px 8px; border-radius: 999px; font-size: 12px;
+  transition: color .15s ease, background .15s ease;
+}
+.pq-act button:hover { color: var(--ink); background: var(--surface-2); }
+
+/* ─── task hub ─── */
+.hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.task-col { padding: 18px 18px 8px; }
+.task-col-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; gap: 12px; }
+.task-col h3 { margin: 0; font-family: var(--font-serif); font-size: 18px; font-weight: 500; letter-spacing: -0.01em; }
+.task-col .col-meta { font-size: 11.5px; color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.filter-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+.filter-chips.wide { margin-bottom: 18px; }
+.chip {
+  border: 1px solid var(--line); background: transparent; color: var(--ink-2);
+  border-radius: 999px; padding: 5px 12px; font-size: 12px;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.chip:hover { border-color: var(--line-2); }
+.chip.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip-count { font-family: var(--font-mono); font-size: 10.5px; opacity: 0.6; margin-left: 4px; }
+
+.task-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.task { border-top: 1px solid var(--line); transition: opacity .25s ease, background .35s ease; }
+.task:first-child { border-top: 0; }
+.task.done { opacity: 0.55; }
+.task.done .task-title { text-decoration: line-through; color: var(--muted); }
+.task.flash > .task-main { animation: flash .6s ease; }
+.task.open { background: var(--surface-2); }
+.task.empty-row { color: var(--muted); font-style: italic; padding: 14px 4px; font-size: 13px; }
+.task-main {
+  display: grid; grid-template-columns: 22px 1fr auto auto 14px;
+  gap: 12px; align-items: center; padding: 11px 4px;
+  cursor: pointer; transition: background .15s ease;
+}
+.task-main:hover { background: var(--surface-2); }
+.task-chev { color: var(--muted); display: flex; align-items: center; justify-content: center; }
+@keyframes flash { 0% { background: var(--accent-soft); } 100% { background: transparent; } }
+
+.check {
+  width: 18px; height: 18px; border-radius: 999px;
+  border: 1.5px solid var(--line-2); background: transparent;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: border-color .15s ease, background .25s ease; padding: 0;
+}
+.check:hover { border-color: var(--ink); }
+.check.checked { background: var(--ok); border-color: var(--ok); }
+.check svg { width: 11px; height: 11px; opacity: 0; transition: opacity .25s ease; color: var(--bg); }
+.check.checked svg { opacity: 1; }
+
+.task-body { min-width: 0; }
+.task-title { color: var(--ink); font-size: 13.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.task-sub { color: var(--muted); font-size: 11.5px; margin-top: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.note-snip { font-family: var(--font-mono); letter-spacing: 0.02em; color: var(--muted); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.age-snip { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted-2); white-space: nowrap; }
+.inline-pill { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn); }
+
+.pri { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px; color: var(--muted); }
+.pri.high { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.pri.med  { color: var(--ink-2); border-color: var(--line-2); }
+.pri.low  { color: var(--muted); border-color: var(--line); }
+.due { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.due.over { color: var(--warn); }
+.due.soon { color: var(--accent); }
+
+/* ─── research ─── */
+.research-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
+.rcard { padding: 18px 18px 14px; display: flex; flex-direction: column; gap: 10px; min-height: 220px; }
+.rcard.editing { background: var(--surface-2); }
+.rcard-note { margin: 4px 0 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; text-wrap: pretty; border-top: 1px dashed var(--line); padding-top: 10px; }
+.rcard-note.muted { color: var(--muted); font-style: italic; }
+.rcard-foot { display: flex; justify-content: flex-end; margin-top: auto; }
+.rcard-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.rcard-name { font-family: var(--font-serif); font-size: 17px; line-height: 1.25; font-weight: 500; letter-spacing: -0.01em; color: var(--ink); margin: 0; }
+.status-pill { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.status-pill.active   { color: var(--ok);   border-color: var(--ok);   background: var(--ok-soft); }
+.status-pill.stalled  { color: var(--warn);  border-color: var(--warn);  background: var(--warn-soft); }
+.status-pill.complete { color: var(--muted); border-color: var(--line); }
+.progress-row { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bar { flex: 1; height: 4px; border-radius: 999px; background: var(--surface-2); overflow: hidden; position: relative; }
+.bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); transition: width .6s cubic-bezier(.4,0,.2,1); }
+.bar-fill.complete { background: var(--ok); }
+.bar-fill.stalled  { background: var(--muted-2); }
+.rcard-meta { font-size: 11.5px; color: var(--muted); font-family: var(--font-mono); letter-spacing: 0.02em; }
+.rcard-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); letter-spacing: 0.02em; }
+
+/* ─── editor (shared) ─── */
+.editor { padding: 6px 4px 14px; display: flex; flex-direction: column; gap: 10px; border-top: 1px dashed var(--line); margin-top: 0; animation: edopen .25s ease; }
+@keyframes edopen { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.ed-row { display: flex; flex-direction: column; gap: 5px; }
+.ed-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ed-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ed-meta  { font-size: 11px; color: var(--muted-2); font-family: var(--font-mono); }
+.ed-input { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 13px; color: var(--ink); font-family: var(--font-sans); transition: border-color .15s ease; resize: vertical; }
+.ed-input.inline { padding: 6px 10px; flex: 1; }
+.ed-input:focus { border-color: var(--accent); }
+.ed-input[type="date"] { font-family: var(--font-mono); font-size: 12px; }
+.ed-input::placeholder { color: var(--muted-2); }
+.seg { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.seg-btn { background: transparent; border: 1px solid var(--line); color: var(--ink-2); border-radius: 999px; padding: 5px 12px; font-size: 12px; transition: border-color .15s ease, background .15s ease, color .15s ease; }
+.seg-btn:hover { border-color: var(--line-2); }
+.seg-btn.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.range-row { display: flex; align-items: center; gap: 12px; }
+.range-row input[type="range"] { flex: 1; accent-color: var(--accent); }
+.range-val { font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; width: 38px; text-align: right; }
+.tag-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-btn { background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 999px; padding: 4px 10px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.02em; transition: all .15s ease; }
+.tag-btn:hover { color: var(--ink); border-color: var(--line-2); }
+.tag-btn.on { background: var(--accent-soft); color: var(--accent-ink); border-color: var(--accent); }
+.tag.editable { cursor: pointer; user-select: none; }
+.tag.editable:hover { color: var(--warn); border-color: var(--warn); }
+.tag-input { background: transparent; border: 1px dashed var(--line); border-radius: 999px; padding: 3px 10px; font-size: 11px; font-family: var(--font-mono); color: var(--ink); min-width: 90px; }
+.tag-input:focus { border-style: solid; border-color: var(--accent); }
+.ed-actions { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.ed-actions .spacer { flex: 1; }
+
+/* ─── buttons ─── */
+.btn-ink { background: var(--ink); color: var(--bg); border: 0; border-radius: 999px; padding: 7px 16px; font-size: 12.5px; font-weight: 500; transition: background .15s ease; }
+.btn-ink:hover { background: var(--accent); color: #fff; }
+.btn-ink:disabled { opacity: 0.5; cursor: not-allowed; }
+.ghost { background: transparent; border: 0; color: var(--muted); font-size: 12px; padding: 4px 8px; border-radius: 999px; transition: color .15s ease, background .15s ease; }
+.ghost:hover { color: var(--ink); background: var(--surface-2); }
+.ghost.danger { color: var(--warn); display: inline-flex; align-items: center; gap: 6px; }
+.ghost.danger:hover { background: var(--warn-soft); color: var(--warn); }
+.empty { padding: 28px 20px; color: var(--muted); font-family: var(--font-serif); font-size: 16px; font-style: italic; }
+
+/* ─── loading / error ─── */
+.loading-screen {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 100vh; gap: 16px; color: var(--muted);
+}
+.spinner {
+  width: 24px; height: 24px; border: 2px solid var(--line);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.error-banner {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--warn-soft); border: 1px solid var(--warn); border-radius: var(--radius);
+  padding: 12px 20px; font-size: 13px; color: var(--warn); z-index: 100;
+  display: flex; align-items: center; gap: 12px;
+  animation: slideUp .25s ease;
+}
+@keyframes slideUp { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+/* ─── setup screen ─── */
+.setup-wrap {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: 40px 20px;
+}
+.setup-card {
+  width: 100%; max-width: 560px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); padding: 40px 40px 36px;
+}
+.setup-brand { font-family: var(--font-serif); font-size: 24px; letter-spacing: -0.02em; margin-bottom: 4px; }
+.setup-brand em { color: var(--accent); font-style: italic; }
+.setup-sub { font-size: 13px; color: var(--muted); margin-bottom: 32px; }
+.setup-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.setup-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.setup-input {
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 10px; padding: 10px 14px; font-size: 13px;
+  font-family: var(--font-mono); color: var(--ink);
+  transition: border-color .15s ease; width: 100%;
+}
+.setup-input:focus { border-color: var(--accent); outline: none; }
+.setup-input::placeholder { color: var(--muted-2); font-family: var(--font-mono); }
+.setup-sql-toggle { background: transparent; border: 0; color: var(--accent); font-size: 12.5px; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; margin-bottom: 12px; display: inline-block; }
+.setup-sql {
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px;
+  padding: 14px 16px; font-family: var(--font-mono); font-size: 11.5px;
+  color: var(--ink-2); line-height: 1.7; white-space: pre; overflow-x: auto;
+  margin-bottom: 20px; max-height: 260px; overflow-y: auto;
+}
+.setup-footer { display: flex; justify-content: flex-end; margin-top: 8px; }
+.btn-accent { background: var(--accent); color: #fff; border: 0; border-radius: 999px; padding: 10px 24px; font-size: 13px; font-weight: 500; transition: opacity .15s ease; }
+.btn-accent:hover { opacity: 0.88; }
+.btn-accent:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ─── responsive ─── */
+@media (max-width: 1100px) {
+  .research-grid { grid-template-columns: repeat(2, 1fr); }
+  .pq li { grid-template-columns: 24px 90px 1fr 80px 90px; }
+  .pq li .pq-act { display: none; }
+}
+@media (max-width: 820px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar { position: static; height: auto; flex-direction: row; align-items: center; padding: 16px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .nav { flex-direction: row; gap: 4px; flex-wrap: wrap; }
+  .nav-eyebrow, .nav-spacer, .sidebar-foot { display: none; }
+  main { padding: 24px 20px 60px; }
+  .hub-grid { grid-template-columns: 1fr; }
+  .research-grid { grid-template-columns: 1fr; }
+  .capture { min-width: 0; width: 100%; }
+  .page-head { flex-direction: column; align-items: stretch; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel">
+/* ── Life Dashboard v1.0.0 ── */
+
+const { useState, useEffect, useMemo, useRef, useCallback } = React;
+const VERSION = "v1.0.0";
+
+const SB_URL_KEY  = "ld-sb-url";
+const SB_KEY_KEY  = "ld-sb-key";
+const THEME_KEY   = "ld-theme";
+const WORK_TAGS   = ["tech-viz","pipeline","vendor","review","hiring","bug","color"];
+
+const SETUP_SQL = `CREATE TABLE IF NOT EXISTS public.tasks (
+  id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  kind       TEXT        NOT NULL CHECK (kind IN ('personal','work')),
+  title      TEXT        NOT NULL,
+  pri        TEXT        NOT NULL DEFAULT 'med',
+  due        DATE,
+  done       BOOLEAN     NOT NULL DEFAULT false,
+  tags       TEXT[]      NOT NULL DEFAULT '{}',
+  note       TEXT        NOT NULL DEFAULT '',
+  blocked    BOOLEAN     NOT NULL DEFAULT false,
+  blocked_by TEXT        NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.research (
+  id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  name       TEXT        NOT NULL,
+  status     TEXT        NOT NULL DEFAULT 'active',
+  progress   INTEGER     NOT NULL DEFAULT 0,
+  tags       TEXT[]      NOT NULL DEFAULT '{}',
+  note       TEXT        NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.tasks    DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.research DISABLE ROW LEVEL SECURITY;`;
+
+/* ─────────────── date helpers ─────────────── */
+
+function todayUTC() {
+  const d = new Date();
+  return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+}
+
+function daysFrom(dateStr) {
+  if (!dateStr) return null;
+  const t = todayUTC();
+  const d = new Date(dateStr.slice(0, 10) + "T00:00:00Z");
+  return Math.round((d - t) / 86400000);
+}
+
+function daysAgo(isoStr) {
+  if (!isoStr) return null;
+  const t = todayUTC();
+  const d = new Date(isoStr.slice(0, 10) + "T00:00:00Z");
+  return Math.round((t - d) / 86400000);
+}
+
+function fmtDate(d) {
+  if (!d) return "";
+  const dt = new Date(d.slice(0, 10) + "T00:00:00Z");
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${months[dt.getUTCMonth()]} ${dt.getUTCDate()}`;
+}
+
+function relDue(d) {
+  const n = daysFrom(d);
+  if (n === null) return "—";
+  if (n < 0)  return `${Math.abs(n)}d overdue`;
+  if (n === 0) return "today";
+  if (n === 1) return "tomorrow";
+  if (n < 7)  return `in ${n}d`;
+  return fmtDate(d);
+}
+
+function relAgo(isoStr) {
+  const n = daysAgo(isoStr);
+  if (n === null) return "—";
+  if (n <= 0) return "today";
+  if (n === 1) return "yesterday";
+  if (n < 30) return `${n}d ago`;
+  if (n < 365) return `${Math.floor(n / 30)}mo ago`;
+  return `${Math.floor(n / 365)}y ago`;
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+function getTodayLabel() {
+  const d = new Date();
+  const days   = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  return `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
+const isoToday = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+};
+
+/* db row → js object */
+function toTask(row) {
+  return {
+    id: row.id, kind: row.kind, title: row.title,
+    pri: row.pri, due: row.due,
+    done: row.done, tags: row.tags || [],
+    note: row.note || "", blocked: row.blocked || false,
+    blockedBy: row.blocked_by || "",
+    createdAt: row.created_at, updatedAt: row.updated_at,
+  };
+}
+function toResearch(row) {
+  return {
+    id: row.id, name: row.name, status: row.status,
+    progress: row.progress, tags: row.tags || [],
+    note: row.note || "",
+    createdAt: row.created_at, updatedAt: row.updated_at,
+  };
+}
+
+/* ─────────────── tiny icons ─────────────── */
+const IconPlus  = (p) => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" {...p}><path d="M12 5v14M5 12h14" /></svg>);
+const IconMoon  = (p) => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z" /></svg>);
+const IconSun   = (p) => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" {...p}><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></svg>);
+const IconTrash = (p) => (<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /></svg>);
+const IconChev  = (p) => (<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M6 9l6 6 6-6" /></svg>);
+const IconDisc  = (p) => (<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" {...p}><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" /></svg>);
+
+const Check = ({ on, onClick, ariaLabel }) => (
+  <button className={`check ${on ? "checked" : ""}`} aria-label={ariaLabel} aria-pressed={on}
+    onClick={(e) => { e.stopPropagation(); onClick(); }}>
+    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2.5 6.2 L5 8.6 L9.5 3.5" />
+    </svg>
+  </button>
+);
+
+/* ─────────────── setup screen ─────────────── */
+
+function SetupScreen({ onConnect }) {
+  const [url, setUrl]         = useState("");
+  const [key, setKey]         = useState("");
+  const [showSql, setShowSql] = useState(false);
+  const [busy, setBusy]       = useState(false);
+  const [err, setErr]         = useState("");
+
+  async function submit(e) {
+    e.preventDefault();
+    const u = url.trim(), k = key.trim();
+    if (!u || !k) { setErr("Both fields are required."); return; }
+    setBusy(true); setErr("");
+    try {
+      const client = window.supabase.createClient(u, k);
+      const { error } = await client.from("tasks").select("id").limit(1);
+      if (error) throw error;
+      localStorage.setItem(SB_URL_KEY, u);
+      localStorage.setItem(SB_KEY_KEY, k);
+      onConnect();
+    } catch (ex) {
+      setErr(ex.message || "Could not connect — check your URL and key.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="setup-wrap">
+      <div className="setup-card">
+        <div className="setup-brand">Atelier<em>.</em></div>
+        <div className="setup-sub">Connect your Supabase project to get started — data stays yours.</div>
+
+        <form onSubmit={submit}>
+          <div className="setup-field">
+            <label className="setup-label">Supabase Project URL</label>
+            <input className="setup-input" type="url" value={url} onChange={e => setUrl(e.target.value)}
+              placeholder="https://xxxxxxxxxxxx.supabase.co" autoFocus />
+          </div>
+          <div className="setup-field">
+            <label className="setup-label">Anon Public Key</label>
+            <input className="setup-input" type="text" value={key} onChange={e => setKey(e.target.value)}
+              placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9…" />
+          </div>
+
+          {err && <div style={{color:"var(--warn)",fontSize:"12.5px",marginBottom:"12px"}}>{err}</div>}
+
+          <button type="button" className="setup-sql-toggle" onClick={() => setShowSql(s => !s)}>
+            {showSql ? "Hide" : "Show"} required SQL schema
+          </button>
+          {showSql && <pre className="setup-sql">{SETUP_SQL}</pre>}
+
+          <div className="setup-footer">
+            <button type="submit" className="btn-accent" disabled={busy}>
+              {busy ? "Connecting…" : "Connect →"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────── sidebar ─────────────── */
+
+function Sidebar({ theme, onToggleTheme, view, setView, counts, onReset }) {
+  return (
+    <aside className="sidebar">
+      <div className="brand">
+        <div>
+          <div className="brand-mark">Atelier<em>.</em></div>
+          <div className="brand-sub">Jordan · personal OS</div>
+          <div className="brand-version">{VERSION}</div>
+        </div>
+      </div>
+      <nav className="nav" aria-label="Sections">
+        <div className="nav-eyebrow">Workspace</div>
+        <button className={`nav-item ${view === "today" ? "active" : ""}`} onClick={() => setView("today")}>
+          <span>Today</span>
+          <span className="count">{counts.priority}</span>
+        </button>
+        <button className={`nav-item ${view === "research" ? "active" : ""}`} onClick={() => setView("research")}>
+          <span>Research</span>
+          <span className="count">{counts.research}</span>
+        </button>
+      </nav>
+      <div className="nav-spacer" />
+      <div className="sidebar-foot">
+        <button className="theme-toggle" onClick={onToggleTheme} aria-label="Toggle theme">
+          {theme === "dark" ? <IconSun /> : <IconMoon />}
+          <span>{theme === "dark" ? "Light paper" : "Quiet dark"}</span>
+        </button>
+        <button className="reset-link" onClick={onReset}>Disconnect Supabase</button>
+      </div>
+    </aside>
+  );
+}
+
+/* ─────────────── quick capture ─────────────── */
+
+function QuickCapture({ onAdd, defaultBucket = "personal" }) {
+  const [text, setText]     = useState("");
+  const [bucket, setBucket] = useState(defaultBucket);
+  const [busy, setBusy]     = useState(false);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    function onKey(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        inputRef.current && inputRef.current.focus();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  async function submit(e) {
+    e.preventDefault();
+    const t = text.trim();
+    if (!t || busy) return;
+    setBusy(true);
+    await onAdd(bucket, t);
+    setText("");
+    setBusy(false);
+  }
+
+  return (
+    <form className="capture" onSubmit={submit}>
+      <span className="cap-icon" aria-hidden><IconPlus /></span>
+      <input ref={inputRef} type="text" value={text} onChange={(e) => setText(e.target.value)}
+        placeholder="Capture a thought — ⌘K" aria-label="Quick capture" />
+      <select value={bucket} onChange={(e) => setBucket(e.target.value)} aria-label="Destination">
+        <option value="personal">→ Personal</option>
+        <option value="work">→ Work</option>
+        <option value="research">→ Research</option>
+      </select>
+      <button type="submit" className="cap-submit" disabled={busy}>{busy ? "…" : "Capture"}</button>
+    </form>
+  );
+}
+
+/* ─────────────── priority queue ─────────────── */
+
+function PriorityQueue({ items, onMarkDone }) {
+  if (items.length === 0) {
+    return (
+      <section className="block">
+        <h2 className="section-title">Priority <em>queue</em></h2>
+        <div className="card empty">Beautifully empty. Nothing urgent today.</div>
+      </section>
+    );
+  }
+  return (
+    <section className="block">
+      <div className="eyebrow">
+        <span>What needs you most</span>
+        <span className="eyebrow-meta">{items.length} live · ordered by urgency</span>
+      </div>
+      <h2 className="section-title">Priority <em>queue</em></h2>
+      <div className="card pq">
+        <ol>
+          {items.map((it, i) => {
+            const d = daysFrom(it.due);
+            const isOver    = d !== null && d < 0;
+            const isSoon    = d !== null && d >= 0 && d <= 2;
+            const isBlocked = it.flag === "blocked";
+            const klass    = isBlocked ? "blocked" : (isOver ? "overdue" : "");
+            const pillKls  = isBlocked ? "blk" : (isOver ? "over" : (isSoon ? "due" : ""));
+            const pillLbl  = isBlocked ? "Blocked" : (isOver ? "Overdue" : (isSoon ? "Due soon" : "Queued"));
+            const ageLabel = it.createdAt ? `open ${relAgo(it.createdAt)}` : "";
+            return (
+              <li key={it.id} className={klass}>
+                <span className="rank">{String(i + 1).padStart(2, "0")}</span>
+                <span className={`pq-pill ${pillKls}`}>{pillLbl}</span>
+                <span className="pq-title">{it.title}</span>
+                <span className="pq-source">{it.source}{it.sub ? ` · ${it.sub}` : ""}</span>
+                <span className="pq-age">{ageLabel}</span>
+                <span className={`pq-due ${isOver ? "over" : ""}`}>
+                  {it.due ? relDue(it.due) : (isBlocked ? `blocked · ${it.blockedBy || "—"}` : "—")}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────── task editor ─────────────── */
+
+function TaskEditor({ task, onSave, onDelete, onClose, busy }) {
+  const [draft, setDraft] = useState({ ...task, tags: task.tags || [] });
+  const tagOptions = task.kind === "work" ? WORK_TAGS : [];
+
+  function toggleTag(t) {
+    setDraft(d => ({ ...d, tags: d.tags.includes(t) ? d.tags.filter(x => x !== t) : [...d.tags, t] }));
+  }
+
+  const ageLabel = task.createdAt
+    ? `Added ${relAgo(task.createdAt)} · ${fmtDate(task.createdAt)}`
+    : "";
+
+  return (
+    <div className="editor">
+      <div className="ed-row">
+        <label className="ed-label">Title</label>
+        <input className="ed-input" value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} />
+      </div>
+
+      <div className="ed-grid">
+        <div className="ed-row">
+          <label className="ed-label">Priority</label>
+          <div className="seg">
+            {["high","med","low"].map(p => (
+              <button key={p} type="button" className={`seg-btn ${draft.pri === p ? "active" : ""}`}
+                onClick={() => setDraft({ ...draft, pri: p })}>
+                {p[0].toUpperCase() + p.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="ed-row">
+          <label className="ed-label">Due</label>
+          <input type="date" className="ed-input" value={draft.due || ""}
+            onChange={e => setDraft({ ...draft, due: e.target.value || null })} />
+        </div>
+      </div>
+
+      {task.kind === "work" && (
+        <div className="ed-row">
+          <label className="ed-label">Tags</label>
+          <div className="tag-picker">
+            {tagOptions.map(t => (
+              <button key={t} type="button" className={`tag-btn ${draft.tags.includes(t) ? "on" : ""}`}
+                onClick={() => toggleTag(t)}>{t}</button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {task.kind === "work" && (
+        <div className="ed-row">
+          <label className="ed-label">Blocked</label>
+          <div className="seg">
+            <button type="button" className={`seg-btn ${!draft.blocked ? "active" : ""}`}
+              onClick={() => setDraft({ ...draft, blocked: false, blockedBy: "" })}>No</button>
+            <button type="button" className={`seg-btn ${draft.blocked ? "active" : ""}`}
+              onClick={() => setDraft({ ...draft, blocked: true })}>Blocked</button>
+            {draft.blocked && (
+              <input className="ed-input inline" placeholder="Waiting on…"
+                value={draft.blockedBy || ""} onChange={e => setDraft({ ...draft, blockedBy: e.target.value })} />
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="ed-row">
+        <label className="ed-label">Note</label>
+        <textarea className="ed-input" rows={2} value={draft.note || ""}
+          onChange={e => setDraft({ ...draft, note: e.target.value })} placeholder="A line of context…" />
+      </div>
+
+      {ageLabel && <div className="ed-meta">{ageLabel}</div>}
+
+      <div className="ed-actions">
+        <button type="button" className="ghost danger" onClick={onDelete} disabled={busy}><IconTrash /> Delete</button>
+        <div className="spacer" />
+        <button type="button" className="ghost" onClick={onClose} disabled={busy}>Cancel</button>
+        <button type="button" className="btn-ink" onClick={() => onSave(draft)} disabled={busy}>
+          {busy ? "Saving…" : "Save"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────── task row ─────────────── */
+
+function TaskRow({ task, isOpen, onToggle, onCheck, onSave, onDelete, onClose, flash, saveBusy }) {
+  const d      = daysFrom(task.due);
+  const isOver = d !== null && d < 0 && !task.done;
+  const isSoon = d !== null && d >= 0 && d <= 2 && !task.done;
+  const age    = task.createdAt ? relAgo(task.createdAt) : null;
+
+  return (
+    <li className={`task ${task.done ? "done" : ""} ${flash ? "flash" : ""} ${isOpen ? "open" : ""}`}>
+      <div className="task-main" onClick={onToggle}>
+        <Check on={task.done} onClick={onCheck} ariaLabel={`Mark "${task.title}" ${task.done ? "incomplete" : "complete"}`} />
+        <div className="task-body">
+          <div className="task-title">
+            {task.title}
+            {task.blocked && <span className="inline-pill" title={`Blocked · ${task.blockedBy || ""}`}>blocked</span>}
+          </div>
+          <div className="task-sub">
+            {task.note && <span className="note-snip">{task.note}</span>}
+            {task.tags && task.tags.map(t => <span key={t} className="tag">{t}</span>)}
+            {age && !task.done && <span className="age-snip">{age}</span>}
+          </div>
+        </div>
+        <span className={`pri ${task.pri}`}>{task.pri === "high" ? "High" : task.pri === "med" ? "Med" : "Low"}</span>
+        <span className={`due ${isOver ? "over" : (isSoon ? "soon" : "")}`}>{task.due ? relDue(task.due) : "—"}</span>
+        <span className="task-chev" aria-hidden>
+          <IconChev style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "transform .2s" }} />
+        </span>
+      </div>
+      {isOpen && (
+        <TaskEditor task={task} onSave={onSave} onDelete={onDelete} onClose={onClose} busy={saveBusy} />
+      )}
+    </li>
+  );
+}
+
+/* ─────────────── task column ─────────────── */
+
+function TaskCol({ title, kind, tasks, openId, setOpenId, onToggle, onSave, onDelete, flashId, saveBusy }) {
+  const isWork  = kind === "work";
+  const filters = isWork ? ["all","high","tech-viz","pipeline","vendor","bug"] : ["all","high","med","low"];
+  const [filter, setFilter] = useState("all");
+
+  function match(t) {
+    if (filter === "all") return true;
+    if (["high","med","low"].includes(filter)) return t.pri === filter;
+    return (t.tags || []).includes(filter);
+  }
+  const visible = tasks.filter(match);
+  const open    = tasks.filter(t => !t.done).length;
+
+  return (
+    <div className="card task-col">
+      <div className="task-col-head">
+        <h3>{title}</h3>
+        <span className="col-meta">{open} open · {tasks.length - open} done</span>
+      </div>
+      <div className="filter-chips">
+        {filters.map(f => (
+          <button key={f} className={`chip ${filter === f ? "active" : ""}`} onClick={() => setFilter(f)}>
+            {f === "all" ? "All" : f === "high" ? "High" : f === "med" ? "Med" : f === "low" ? "Low" : f}
+          </button>
+        ))}
+      </div>
+      <ul className="task-list">
+        {visible.length === 0 && <li className="task empty-row">Beautifully empty.</li>}
+        {visible.map(t => (
+          <TaskRow
+            key={t.id} task={t}
+            isOpen={openId === t.id}
+            onToggle={() => setOpenId(openId === t.id ? null : t.id)}
+            onCheck={() => onToggle(t.id)}
+            onSave={(draft) => onSave(draft)}
+            onDelete={() => onDelete(t.id)}
+            onClose={() => setOpenId(null)}
+            flash={flashId === t.id}
+            saveBusy={saveBusy === t.id}
+          />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/* ─────────────── research card ─────────────── */
+
+function ResearchCard({ r, isOpen, onToggle, onSave, onDelete, saveBusy }) {
+  const [draft, setDraft] = useState(r);
+  useEffect(() => { setDraft(r); }, [r, isOpen]);
+
+  function addTag(value) {
+    const v = value.trim();
+    if (!v || draft.tags.includes(v)) return;
+    setDraft({ ...draft, tags: [...draft.tags, v] });
+  }
+  function removeTag(t) { setDraft({ ...draft, tags: draft.tags.filter(x => x !== t) }); }
+
+  const age = r.createdAt ? `Added ${relAgo(r.createdAt)}` : "";
+
+  return (
+    <article className={`card lift rcard ${isOpen ? "editing" : ""}`}>
+      {!isOpen && (
+        <>
+          <div className="rcard-head">
+            <h4 className="rcard-name">{r.name}</h4>
+            <span className={`status-pill ${r.status}`}>
+              {r.status === "active" ? "Active" : r.status === "stalled" ? "Stalled" : "Complete"}
+            </span>
+          </div>
+          <div className="progress-row">
+            <div className="bar"><div className={`bar-fill ${r.status}`} style={{ width: r.progress + "%" }} /></div>
+            <span>{r.progress}%</span>
+          </div>
+          <div className="rcard-meta">
+            Updated {relAgo(r.updatedAt || r.createdAt)}
+            {age && <> · {age}</>}
+          </div>
+          <div className="rcard-tags">{r.tags.map(t => <span key={t} className="tag">{t}</span>)}</div>
+          {r.note
+            ? <p className="rcard-note">{r.note}</p>
+            : <p className="rcard-note muted">No notes yet.</p>}
+          <div className="rcard-foot">
+            <button className="ghost" onClick={onToggle}>Edit</button>
+          </div>
+        </>
+      )}
+
+      {isOpen && (
+        <div className="rcard-edit">
+          <div className="ed-row">
+            <label className="ed-label">Name</label>
+            <input className="ed-input" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} />
+          </div>
+          <div className="ed-grid">
+            <div className="ed-row">
+              <label className="ed-label">Status</label>
+              <div className="seg">
+                {["active","stalled","complete"].map(s => (
+                  <button key={s} type="button" className={`seg-btn ${draft.status === s ? "active" : ""}`}
+                    onClick={() => setDraft({ ...draft, status: s, progress: s === "complete" ? 100 : draft.progress })}>
+                    {s[0].toUpperCase() + s.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="ed-row">
+              <label className="ed-label">Progress</label>
+              <div className="range-row">
+                <input type="range" min="0" max="100" step="1" value={draft.progress}
+                  onChange={e => setDraft({ ...draft, progress: Number(e.target.value) })} />
+                <span className="range-val">{draft.progress}%</span>
+              </div>
+            </div>
+          </div>
+          <div className="ed-row">
+            <label className="ed-label">Tags</label>
+            <div className="tag-picker editable">
+              {draft.tags.map(t => (
+                <span key={t} className="tag editable" onClick={() => removeTag(t)} title="Click to remove">{t} ×</span>
+              ))}
+              <input className="tag-input" placeholder="add tag, ↵"
+                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addTag(e.currentTarget.value); e.currentTarget.value = ""; } }} />
+            </div>
+          </div>
+          <div className="ed-row">
+            <label className="ed-label">Notes</label>
+            <textarea className="ed-input" rows={3} value={draft.note || ""}
+              onChange={e => setDraft({ ...draft, note: e.target.value })} placeholder="A line of thought…" />
+          </div>
+          {age && <div className="ed-meta">{age}</div>}
+          <div className="ed-actions">
+            <button type="button" className="ghost danger" onClick={onDelete} disabled={saveBusy}><IconTrash /> Delete</button>
+            <div className="spacer" />
+            <button type="button" className="ghost" onClick={onToggle} disabled={saveBusy}>Cancel</button>
+            <button type="button" className="btn-ink" onClick={() => onSave(draft)} disabled={saveBusy}>
+              {saveBusy ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </div>
+      )}
+    </article>
+  );
+}
+
+/* ─────────────── today view ─────────────── */
+
+function TodayView({ tasks, onToggle, onSave, onDelete, openId, setOpenId, flashId, saveBusy, priorityItems, onAddCapture }) {
+  const personal = tasks.filter(t => t.kind === "personal");
+  const work     = tasks.filter(t => t.kind === "work");
+
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1 className="hero">{getGreeting()}, Jordan — <em>let's see what's on.</em></h1>
+          <div className="hero-meta">
+            {getTodayLabel()}
+            <span className="dot" />
+            {tasks.filter(t => !t.done).length} open tasks
+          </div>
+        </div>
+        <QuickCapture onAdd={onAddCapture} />
+      </div>
+
+      <PriorityQueue items={priorityItems} onMarkDone={onToggle} />
+
+      <section className="block">
+        <div className="eyebrow">
+          <span>Today's lists</span>
+          <span className="eyebrow-meta">{tasks.filter(t => !t.done).length} open</span>
+        </div>
+        <h2 className="section-title">Task <em>hub</em></h2>
+        <div className="hub-grid">
+          <TaskCol title="Personal" kind="personal" tasks={personal}
+            openId={openId} setOpenId={setOpenId} onToggle={onToggle}
+            onSave={onSave} onDelete={onDelete} flashId={flashId} saveBusy={saveBusy} />
+          <TaskCol title="Work" kind="work" tasks={work}
+            openId={openId} setOpenId={setOpenId} onToggle={onToggle}
+            onSave={onSave} onDelete={onDelete} flashId={flashId} saveBusy={saveBusy} />
+        </div>
+      </section>
+    </>
+  );
+}
+
+/* ─────────────── research view ─────────────── */
+
+function ResearchView({ research, onSave, onDelete, openId, setOpenId, onAddCapture, saveBusy }) {
+  const [filter, setFilter] = useState("all");
+  const filtered = research.filter(r => filter === "all" ? true : r.status === filter);
+
+  const counts = {
+    all:      research.length,
+    active:   research.filter(r => r.status === "active").length,
+    stalled:  research.filter(r => r.status === "stalled").length,
+    complete: research.filter(r => r.status === "complete").length,
+  };
+
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1 className="hero">Open <em>research threads</em>.</h1>
+          <div className="hero-meta">
+            {counts.active} active · {counts.stalled} stalled · {counts.complete} complete
+          </div>
+        </div>
+        <QuickCapture onAdd={onAddCapture} defaultBucket="research" />
+      </div>
+
+      <section className="block">
+        <div className="filter-chips wide">
+          {["all","active","stalled","complete"].map(f => (
+            <button key={f} className={`chip ${filter === f ? "active" : ""}`} onClick={() => setFilter(f)}>
+              {f === "all" ? "All" : f[0].toUpperCase() + f.slice(1)}
+              <span className="chip-count">{counts[f]}</span>
+            </button>
+          ))}
+        </div>
+        <div className="research-grid">
+          {filtered.length === 0 && (
+            <div className="card empty" style={{gridColumn:"1/-1"}}>Nothing here yet. Capture a research thread above.</div>
+          )}
+          {filtered.map(r => (
+            <ResearchCard key={r.id} r={r}
+              isOpen={openId === r.id}
+              onToggle={() => setOpenId(openId === r.id ? null : r.id)}
+              onSave={(draft) => onSave(draft)}
+              onDelete={() => onDelete(r.id)}
+              saveBusy={saveBusy === r.id}
+            />
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}
+
+/* ─────────────── dashboard (connected) ─────────────── */
+
+function Dashboard({ db, onReset }) {
+  const [theme, setTheme]   = useState(() => localStorage.getItem(THEME_KEY) || "dark");
+  const [view, setView]     = useState("today");
+  const [tasks, setTasks]   = useState([]);
+  const [research, setRes]  = useState([]);
+  const [loading, setLoad]  = useState(true);
+  const [error, setError]   = useState(null);
+  const [saveBusy, setSave] = useState(null);
+  const [openTaskId, setOpenTaskId]   = useState(null);
+  const [openResId,  setOpenResId]    = useState(null);
+  const [flashId, setFlash]           = useState(null);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
+
+  /* initial load */
+  useEffect(() => {
+    async function load() {
+      setLoad(true);
+      try {
+        const [{ data: tRows, error: te }, { data: rRows, error: re }] = await Promise.all([
+          db.from("tasks").select("*").order("created_at", { ascending: false }),
+          db.from("research").select("*").order("created_at", { ascending: false }),
+        ]);
+        if (te) throw te;
+        if (re) throw re;
+        setTasks((tRows || []).map(toTask));
+        setRes((rRows || []).map(toResearch));
+      } catch (ex) {
+        setError(ex.message || "Failed to load data.");
+      } finally {
+        setLoad(false);
+      }
+    }
+    load();
+  }, []);
+
+  function flash(id) { setFlash(id); setTimeout(() => setFlash(null), 700); }
+  function showErr(msg) { setError(msg); setTimeout(() => setError(null), 5000); }
+
+  /* ── task ops ── */
+  async function toggleTaskDone(id) {
+    const t = tasks.find(x => x.id === id);
+    if (!t) return;
+    const next = !t.done;
+    setTasks(prev => prev.map(x => x.id === id ? { ...x, done: next } : x));
+    flash(id);
+    const { error } = await db.from("tasks").update({ done: next }).eq("id", id);
+    if (error) {
+      setTasks(prev => prev.map(x => x.id === id ? { ...x, done: t.done } : x));
+      showErr("Could not update task.");
+    }
+  }
+
+  async function saveTask(draft) {
+    setSave(draft.id);
+    const payload = {
+      title: draft.title, pri: draft.pri, due: draft.due || null,
+      done: draft.done, tags: draft.tags, note: draft.note || "",
+      blocked: draft.blocked || false, blocked_by: draft.blockedBy || "",
+    };
+    const { data, error } = await db.from("tasks").update(payload).eq("id", draft.id).select().single();
+    setSave(null);
+    if (error) { showErr("Could not save task."); return; }
+    setTasks(prev => prev.map(t => t.id === draft.id ? toTask(data) : t));
+    setOpenTaskId(null);
+    flash(draft.id);
+  }
+
+  async function deleteTask(id) {
+    setTasks(prev => prev.filter(t => t.id !== id));
+    setOpenTaskId(null);
+    const { error } = await db.from("tasks").delete().eq("id", id);
+    if (error) showErr("Could not delete task.");
+  }
+
+  async function addItem(bucket, text) {
+    if (bucket === "personal" || bucket === "work") {
+      const payload = {
+        kind: bucket, title: text, pri: "med",
+        due: null, done: false, tags: [], note: "", blocked: false, blocked_by: "",
+      };
+      const { data, error } = await db.from("tasks").insert([payload]).select().single();
+      if (error) { showErr("Could not add task."); return; }
+      const newTask = toTask(data);
+      setTasks(prev => [newTask, ...prev]);
+      setOpenTaskId(newTask.id);
+      flash(newTask.id);
+      setView("today");
+    } else if (bucket === "research") {
+      const payload = { name: text, status: "active", progress: 5, tags: [], note: "" };
+      const { data, error } = await db.from("research").insert([payload]).select().single();
+      if (error) { showErr("Could not add research item."); return; }
+      const newRes = toResearch(data);
+      setRes(prev => [newRes, ...prev]);
+      setOpenResId(newRes.id);
+      setView("research");
+    }
+  }
+
+  /* ── research ops ── */
+  async function saveResearch(draft) {
+    setSave(draft.id);
+    const payload = {
+      name: draft.name, status: draft.status,
+      progress: draft.progress, tags: draft.tags, note: draft.note || "",
+      updated_at: new Date().toISOString(),
+    };
+    const { data, error } = await db.from("research").update(payload).eq("id", draft.id).select().single();
+    setSave(null);
+    if (error) { showErr("Could not save research."); return; }
+    setRes(prev => prev.map(r => r.id === draft.id ? toResearch(data) : r));
+    setOpenResId(null);
+  }
+
+  async function deleteResearch(id) {
+    setRes(prev => prev.filter(r => r.id !== id));
+    setOpenResId(null);
+    const { error } = await db.from("research").delete().eq("id", id);
+    if (error) showErr("Could not delete research.");
+  }
+
+  /* ── priority queue ── */
+  const priorityItems = useMemo(() => {
+    const list = [];
+    tasks.forEach(t => {
+      if (t.done) return;
+      const d = daysFrom(t.due);
+      const isOver = d !== null && d < 0;
+      const isSoon = d !== null && d >= 0 && d <= 3;
+      if (t.pri === "high" || isOver || isSoon || t.blocked) {
+        list.push({
+          id: "T-" + t.id, refId: t.id, kind: "task",
+          title: t.title, due: t.blocked ? null : t.due,
+          flag: t.blocked ? "blocked" : null,
+          blockedBy: t.blockedBy,
+          source: t.kind === "personal" ? "Personal" : (t.tags && t.tags[0] ? `Work · ${t.tags[0]}` : "Work"),
+          sub: t.pri === "high" ? "High" : "",
+          createdAt: t.createdAt,
+        });
+      }
+    });
+    research.forEach(r => {
+      if (r.status === "stalled") {
+        list.push({
+          id: "R-" + r.id, kind: "research",
+          title: r.name, due: null,
+          flag: "blocked", blockedBy: "see notes",
+          source: "Research", sub: r.tags[0] || "",
+          createdAt: r.createdAt,
+        });
+      }
+    });
+    function score(item) {
+      const d = daysFrom(item.due);
+      if (d !== null && d < 0)  return -100 + d;
+      if (d !== null && d <= 2) return d;
+      if (item.flag === "blocked") return 50;
+      if (item.sub === "High")     return 30;
+      return 100;
+    }
+    return list.sort((a, b) => score(a) - score(b)).slice(0, 6);
+  }, [tasks, research]);
+
+  const counts = {
+    priority: priorityItems.length,
+    tasks:    tasks.filter(t => !t.done).length,
+    research: research.filter(r => r.status !== "complete").length,
+  };
+
+  if (loading) {
+    return (
+      <div className="loading-screen">
+        <div className="spinner" />
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px" }}>Loading your workspace…</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app">
+      <Sidebar theme={theme} onToggleTheme={() => setTheme(t => t === "dark" ? "light" : "dark")}
+        view={view} setView={setView} counts={counts} onReset={onReset} />
+      <main>
+        {view === "today" && (
+          <TodayView
+            tasks={tasks} onToggle={toggleTaskDone} onSave={saveTask} onDelete={deleteTask}
+            openId={openTaskId} setOpenId={setOpenTaskId} flashId={flashId}
+            saveBusy={saveBusy} priorityItems={priorityItems} onAddCapture={addItem}
+          />
+        )}
+        {view === "research" && (
+          <ResearchView
+            research={research} onSave={saveResearch} onDelete={deleteResearch}
+            openId={openResId} setOpenId={setOpenResId} onAddCapture={addItem}
+            saveBusy={saveBusy}
+          />
+        )}
+      </main>
+
+      {error && (
+        <div className="error-banner">
+          <IconDisc />
+          {error}
+          <button className="ghost" style={{padding:"2px 8px"}} onClick={() => setError(null)}>×</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────── root app ─────────────── */
+
+function App() {
+  const [db, setDb] = useState(null);
+
+  useEffect(() => {
+    const url = localStorage.getItem(SB_URL_KEY);
+    const key = localStorage.getItem(SB_KEY_KEY);
+    if (url && key) {
+      setDb(window.supabase.createClient(url, key));
+    }
+  }, []);
+
+  function handleConnect() {
+    const url = localStorage.getItem(SB_URL_KEY);
+    const key = localStorage.getItem(SB_KEY_KEY);
+    setDb(window.supabase.createClient(url, key));
+  }
+
+  function handleReset() {
+    if (!confirm("Disconnect Supabase? You'll need to re-enter your credentials.")) return;
+    localStorage.removeItem(SB_URL_KEY);
+    localStorage.removeItem(SB_KEY_KEY);
+    setDb(null);
+  }
+
+  if (!db) return <SetupScreen onConnect={handleConnect} />;
+  return <Dashboard db={db} onReset={handleReset} />;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
