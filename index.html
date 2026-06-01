@@ -225,6 +225,21 @@ section.block { margin-bottom: 44px; }
 .task.flash > .task-main { animation: flash .6s ease; }
 .task.open { background: var(--surface-2); }
 .task.empty-row { color: var(--muted); font-style: italic; padding: 14px 4px; font-size: 13px; }
+.done-bin { margin-top: 10px; border-top: 1px solid var(--line); }
+.done-bin-toggle {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  background: none; border: 0; cursor: pointer; padding: 11px 4px;
+  color: var(--muted); font-family: inherit; font-size: 12px;
+  letter-spacing: .04em; text-transform: uppercase; transition: color .15s ease;
+}
+.done-bin-toggle:hover { color: var(--ink); }
+.done-bin-toggle .done-bin-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: var(--surface-2); color: var(--muted); font-size: 11px;
+  font-family: var(--font-mono); letter-spacing: 0;
+}
+.done-bin-toggle .chev { margin-left: auto; }
 .task-main {
   display: grid; grid-template-columns: 22px 1fr auto auto 14px;
   gap: 12px; align-items: center; padding: 11px 4px;
@@ -441,7 +456,7 @@ section.block { margin-bottom: 44px; }
 /* ── Life Dashboard v1.0.0 ── */
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
-const VERSION = "v1.0.8";
+const VERSION = "v1.0.9";
 
 const SUPABASE_URL = "https://eefycklvsmuqhdckymmw.supabase.co";
 const SUPABASE_KEY = "sb_publishable_FMQM5VuVnpCB2Uy3JR0Hwg_F27EuqfM";
@@ -810,14 +825,31 @@ function TaskCol({ title, kind, tasks, openId, setOpenId, onToggle, onSave, onDe
   const isWork  = kind === "work";
   const filters = isWork ? ["all","high","tech-viz","pipeline","vendor","bug"] : ["all","high","med","low"];
   const [filter, setFilter] = useState("all");
+  const [showDone, setShowDone] = useState(false);
 
   function match(t) {
     if (filter === "all") return true;
     if (["high","med","low"].includes(filter)) return t.pri === filter;
     return (t.tags || []).includes(filter);
   }
-  const visible = tasks.filter(match);
-  const open    = tasks.filter(t => !t.done).length;
+  const visible   = tasks.filter(match);
+  const openTasks = visible.filter(t => !t.done);
+  const doneTasks = visible.filter(t => t.done);
+  const open      = tasks.filter(t => !t.done).length;
+
+  const renderRow = (t) => (
+    <TaskRow
+      key={t.id} task={t}
+      isOpen={openId === t.id}
+      onToggle={() => setOpenId(openId === t.id ? null : t.id)}
+      onCheck={() => onToggle(t.id)}
+      onSave={(draft) => onSave(draft)}
+      onDelete={() => onDelete(t.id)}
+      onClose={() => setOpenId(null)}
+      flash={flashId === t.id}
+      saveBusy={saveBusy === t.id}
+    />
+  );
 
   return (
     <div className="card task-col">
@@ -833,21 +865,23 @@ function TaskCol({ title, kind, tasks, openId, setOpenId, onToggle, onSave, onDe
         ))}
       </div>
       <ul className="task-list">
-        {visible.length === 0 && <li className="task empty-row">Beautifully empty.</li>}
-        {visible.map(t => (
-          <TaskRow
-            key={t.id} task={t}
-            isOpen={openId === t.id}
-            onToggle={() => setOpenId(openId === t.id ? null : t.id)}
-            onCheck={() => onToggle(t.id)}
-            onSave={(draft) => onSave(draft)}
-            onDelete={() => onDelete(t.id)}
-            onClose={() => setOpenId(null)}
-            flash={flashId === t.id}
-            saveBusy={saveBusy === t.id}
-          />
-        ))}
+        {openTasks.length === 0 && <li className="task empty-row">Beautifully empty.</li>}
+        {openTasks.map(renderRow)}
       </ul>
+      {doneTasks.length > 0 && (
+        <div className="done-bin">
+          <button className="done-bin-toggle" onClick={() => setShowDone(s => !s)}>
+            <span>Completed</span>
+            <span className="done-bin-count">{doneTasks.length}</span>
+            <IconChev className="chev" style={{ transform: showDone ? "rotate(180deg)" : "none", transition: "transform .2s" }} />
+          </button>
+          {showDone && (
+            <ul className="task-list">
+              {doneTasks.map(renderRow)}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
