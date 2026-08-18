@@ -2,6 +2,11 @@
 
 Plan and architecture decisions: [`tasks/plan.md`](plan.md). Spec: [`PLAN.md`](../PLAN.md).
 
+> **Status 2026-08-19 (overnight session).** Tasks 3, 4 and 5 have their code and
+> SQL written and committed on branch `lifeos-v1-auth`. None of it has touched
+> Supabase: the project is paused and the auth account does not exist, so both are
+> gated on Jordan. See [`HANDOFF.md`](../HANDOFF.md) for the exact order to unblock.
+
 Conventions used below:
 - `SUPABASE_URL` = `https://eefycklvsmuqhdckymmw.supabase.co`, `ANON` = the publishable
   key currently hardcoded at `index.html:462`.
@@ -12,7 +17,7 @@ Conventions used below:
 
 ## Phase 1 — Auth and RLS
 
-## Task 1: Resume the paused Supabase project and confirm data survived
+## Task 1: Resume the paused Supabase project and confirm data survived — ⛔ NEEDS JORDAN
 
 **Description:** Project ref `eefycklvsmuqhdckymmw` is paused, not deleted. Resume it
 from the Supabase dashboard and prove the existing `tasks` and `research` rows are
@@ -34,7 +39,7 @@ start until this is confirmed.
 
 ---
 
-## Task 2: Create the single Supabase Auth account
+## Task 2: Create the single Supabase Auth account — ⛔ NEEDS JORDAN
 
 **Description:** Create one email/password user in Supabase Auth for Jordan. This
 account is both the app's login (until Task 10 swaps the app to Google sign-in) and
@@ -56,7 +61,7 @@ cannot accumulate other accounts.
 
 ---
 
-## Task 3: Add the sign-in gate to `index.html`
+## Task 3: Add the sign-in gate to `index.html` — ✅ CODE DONE, unverified against a real account
 
 **Description:** Wrap `App` in an auth gate: `getSession` on load, a minimal
 email/password sign-in form in the existing design language when there is no session,
@@ -80,7 +85,7 @@ automatically once signed in. Ships *before* RLS is enabled so the app never bre
 
 ---
 
-## Task 4: Enable RLS on `tasks` and `research`
+## Task 4: Enable RLS on `tasks` and `research` — ⏸ SQL WRITTEN (`rls.sql`), not run
 
 **Description:** New root-level `rls.sql` (matching the existing flat `schema.sql`
 convention) that enables RLS on both tables and adds `TO authenticated USING (true)
@@ -114,7 +119,7 @@ documenting the old pattern. This is the task that makes the embedded anon key i
 
 ## Phase 2 — Work calendar
 
-## Task 5: Create `work_events` with RLS on from the start
+## Task 5: Create `work_events` with RLS on from the start — ⏸ SQL WRITTEN, not run
 
 **Description:** Run `docs/work_events.sql`, with its final line replaced: the file
 currently ends in `DISABLE ROW LEVEL SECURITY` under an explicit "DECISION REQUIRED"
@@ -139,7 +144,7 @@ same `TO authenticated` shape as Task 4 — no separate service role, no second 
 
 ---
 
-## Task 6: Build the iOS Shortcut and land real events
+## Task 6: Build the iOS Shortcut and land real events — ⛔ NEEDS JORDAN (doc now correct)
 
 **Description:** Build the Shortcut exactly as specified in
 `docs/work-calendar-shortcut.md`, plus the two auth actions decision D2 requires: a
@@ -217,7 +222,7 @@ this is the panel's main job, not decoration.
 
 ## Phase 3 — Google Calendar
 
-## Task 9: Create the Google OAuth client and wire the Supabase Google provider
+## Task 9: Create the Google OAuth client and wire the Supabase Google provider — ⛔ NEEDS JORDAN
 
 **Description:** Google Cloud project, OAuth consent screen in **Testing** status with
 Jordan as the sole test user, OAuth client with Supabase's callback URL, Calendar and
