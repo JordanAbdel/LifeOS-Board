@@ -357,6 +357,12 @@ section.block { margin-bottom: 44px; }
 }
 @keyframes slideUp { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
+/* ─── auth gate ─── */
+.auth-card { display: flex; flex-direction: column; gap: 10px; padding: 28px; width: min(340px, calc(100vw - 48px)); }
+.auth-card .brand-sub { margin-bottom: 8px; }
+.auth-card .btn-ink { margin-top: 6px; }
+.auth-err { font-size: 12.5px; color: var(--warn); }
+
 
 /* ─── responsive ─── */
 @media (max-width: 1100px) {
@@ -557,6 +563,7 @@ const IconMoon  = (p) => (<svg width="14" height="14" viewBox="0 0 24 24" fill="
 const IconSun   = (p) => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" {...p}><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></svg>);
 const IconTrash = (p) => (<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /></svg>);
 const IconChev  = (p) => (<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M6 9l6 6 6-6" /></svg>);
+const IconExit  = (p) => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>);
 const IconDisc  = (p) => (<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" {...p}><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" /></svg>);
 
 const Check = ({ on, onClick, ariaLabel }) => (
@@ -571,7 +578,7 @@ const Check = ({ on, onClick, ariaLabel }) => (
 
 /* ─────────────── sidebar ─────────────── */
 
-function Sidebar({ theme, onToggleTheme, view, setView, counts }) {
+function Sidebar({ theme, onToggleTheme, view, setView, counts, onSignOut }) {
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -597,6 +604,10 @@ function Sidebar({ theme, onToggleTheme, view, setView, counts }) {
         <button className="theme-toggle" onClick={onToggleTheme} aria-label="Toggle theme">
           {theme === "dark" ? <IconSun /> : <IconMoon />}
           <span>{theme === "dark" ? "Light paper" : "Quiet dark"}</span>
+        </button>
+        <button className="theme-toggle" onClick={onSignOut} aria-label="Sign out">
+          <IconExit />
+          <span>Sign out</span>
         </button>
       </div>
     </aside>
@@ -1082,7 +1093,7 @@ function ResearchView({ research, onSave, onDelete, openId, setOpenId, onAddCapt
 
 /* ─────────────── dashboard (connected) ─────────────── */
 
-function Dashboard({ db }) {
+function Dashboard({ db, onSignOut }) {
   const [theme, setTheme]   = useState(() => localStorage.getItem(THEME_KEY) || "dark");
   const [view, setView]     = useState("today");
   const [tasks, setTasks]   = useState([]);
@@ -1266,7 +1277,7 @@ function Dashboard({ db }) {
   return (
     <div className="app">
       <Sidebar theme={theme} onToggleTheme={() => setTheme(t => t === "dark" ? "light" : "dark")}
-        view={view} setView={setView} counts={counts} />
+        view={view} setView={setView} counts={counts} onSignOut={onSignOut} />
       <main>
         {view === "today" && (
           <TodayView
@@ -1295,12 +1306,102 @@ function Dashboard({ db }) {
   );
 }
 
+/* ─────────────── auth gate ─────────────── */
+
+function SignIn({ db }) {
+  const [email, setEmail]       = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy]         = useState(false);
+  const [err, setErr]           = useState(null);
+
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true);
+    setErr(null);
+    /* Source: https://supabase.com/docs/reference/javascript/auth-signinwithpassword
+       Supabase deliberately returns one indistinct error for "no such account"
+       and "wrong password" to prevent account enumeration, so the message shown
+       here stays vague on purpose. */
+    const { error } = await db.auth.signInWithPassword({ email, password });
+    setBusy(false);
+    /* The docs are explicit: "Always use error.code and error.name to identify
+       errors, not string matching on error messages."
+       Source: https://supabase.com/docs/guides/auth/debugging/error-codes
+       AuthRetryableFetchError is not listed on that page; the name was confirmed
+       against supabase-js 2.112.3 at runtime. This project's Supabase pauses on
+       inactivity, so an unreachable host is a routine case, not an edge one —
+       "Failed to fetch" would send you hunting for the wrong problem. Any other
+       error falls through to the server's own message. */
+    if (error) {
+      setErr(error.name === "AuthRetryableFetchError"
+        ? "Can't reach Supabase — the project may be paused, or you're offline."
+        : (error.message || "Could not sign in."));
+    }
+    /* On success the onAuthStateChange listener in App swaps this for the dashboard. */
+  }
+
+  return (
+    <div className="loading-screen">
+      <form className="card auth-card" onSubmit={submit}>
+        <div>
+          <div className="brand-mark">Atelier<em>.</em></div>
+          <div className="brand-sub">Sign in to continue</div>
+        </div>
+        <label className="ed-label" htmlFor="auth-email">Email</label>
+        <input id="auth-email" className="ed-input" type="email" autoComplete="username"
+          value={email} onChange={e => setEmail(e.target.value)} required autoFocus />
+        <label className="ed-label" htmlFor="auth-password">Password</label>
+        <input id="auth-password" className="ed-input" type="password" autoComplete="current-password"
+          value={password} onChange={e => setPassword(e.target.value)} required />
+        <button className="btn-ink" type="submit" disabled={busy || !email || !password}>
+          {busy ? "Signing in…" : "Sign in"}
+        </button>
+        {err && <div className="auth-err">{err}</div>}
+      </form>
+    </div>
+  );
+}
+
 /* ─────────────── root app ─────────────── */
 
 const _db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 function App() {
-  return <Dashboard db={_db} />;
+  const [session, setSession]   = useState(null);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    /* Dashboard owns the theme, but it does not mount until sign-in — without
+       this the stored light theme flashes dark behind the sign-in form. */
+    document.documentElement.setAttribute("data-theme", localStorage.getItem(THEME_KEY) || "dark");
+
+    let alive = true;
+    /* Source: https://supabase.com/docs/reference/javascript/auth-getsession
+       Reads the session supabase-js persisted in localStorage. The docs' caution
+       about untrusted storage applies to cookie-based server rendering, not to a
+       browser-only client like this one. */
+    _db.auth.getSession().then(({ data }) => {
+      if (!alive) return;
+      setSession(data.session);
+      setChecking(false);
+    });
+
+    /* Source: https://supabase.com/docs/reference/javascript/auth-onauthstatechange
+       Registered immediately after createClient, as the docs show. The callback
+       is synchronous and only sets state — the docs describe it as "safe to use
+       without an async function as callback", and awaiting supabase calls inside
+       it is the documented way to get into trouble. */
+    const { data: { subscription } } = _db.auth.onAuthStateChange((_event, next) => {
+      setSession(next);
+      setChecking(false);
+    });
+
+    return () => { alive = false; subscription.unsubscribe(); };
+  }, []);
+
+  if (checking) return <div className="loading-screen"><div className="spinner" /></div>;
+  if (!session) return <SignIn db={_db} />;
+  return <Dashboard db={_db} onSignOut={() => _db.auth.signOut()} />;
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
