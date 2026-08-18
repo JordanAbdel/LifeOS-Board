@@ -44,6 +44,7 @@ CREATE TRIGGER research_updated_at
   BEFORE UPDATE ON public.research
   FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
--- Disable RLS for personal use (anon key has full access)
-ALTER TABLE public.tasks    DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.research DISABLE ROW LEVEL SECURITY;
+-- RLS is NOT configured here. It lives in rls.sql, which must be run after the
+-- sign-in gate is deployed. This file used to disable RLS outright, which gave
+-- anyone who viewed the deployed page's source full read/write via the embedded
+-- publishable key. See tasks/plan.md, decision D1.
