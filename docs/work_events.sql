@@ -20,15 +20,38 @@ CREATE INDEX IF NOT EXISTS work_events_starts_at_idx
 
 -- Staleness check: if the newest synced_at is hours old, the phone stopped
 -- syncing and the panel must say so rather than silently showing an empty day.
-CREATE OR REPLACE VIEW public.work_events_freshness AS
+-- security_invoker matters here. A view runs with its creator's rights by
+-- default, and this one gets created by the postgres user in the SQL editor —
+-- so without this it would read work_events with RLS bypassed and expose sync
+-- timing to the anon role. "Views bypass RLS by default because they are
+-- usually created with the postgres user."
+-- Source: https://supabase.com/docs/guides/database/postgres/row-level-security#rls-and-views
+-- Requires Postgres 15+, which every current Supabase project runs.
+CREATE OR REPLACE VIEW public.work_events_freshness
+  WITH (security_invoker = true) AS
   SELECT max(synced_at) AS last_sync,
          now() - max(synced_at) AS age
   FROM public.work_events;
 
--- DECISION REQUIRED before running this — see PLAN.md, Open Decisions #1.
--- The line below copies Atelier's existing pattern and is NOT safe here.
--- Atelier ships its Supabase key in publicly deployed client HTML; with RLS
--- off, anyone who views source can read and write this table. That table holds
--- work meeting titles, i.e. employer data. Replace with auth-scoped RLS before
--- any of this is deployed.
-ALTER TABLE public.work_events DISABLE ROW LEVEL SECURITY;
+-- RLS. This table holds work meeting titles, i.e. employer data, and the
+-- publishable key is embedded in publicly deployed client HTML — so the anon
+-- role gets no policy at all. Decision D1 in tasks/plan.md.
+--
+-- The iOS Shortcut writes here too. It authenticates as the same single account
+-- (password grant against /auth/v1/token) and presents that JWT as a Bearer
+-- token, so it lands on the authenticated role and needs no separate policy.
+-- Decision D2; see work-calendar-shortcut.md.
+--
+-- Syntax follows https://supabase.com/docs/guides/database/postgres/row-level-security
+ALTER TABLE public.work_events ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "work_events: authenticated full access" ON public.work_events;
+CREATE POLICY "work_events: authenticated full access"
+  ON public.work_events FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+-- work_events_freshness needs no policy of its own: security_invoker makes it
+-- run the caller's RLS against work_events, so a signed-in session reads it and
+-- the anon role gets nothing.
