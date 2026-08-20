@@ -1422,10 +1422,19 @@ function Dashboard({ db, onSignOut }) {
   }
 
   async function deleteTask(id) {
+    /* Capture the row and its index before the optimistic filter: a failed
+       delete has to put it back where it was, or the only signal is a toast
+       the user may not catch, and the task looks gone until a reload. */
+    const idx = tasks.findIndex(t => t.id === id);
+    if (idx === -1) return;
+    const row = tasks[idx];
     setTasks(prev => prev.filter(t => t.id !== id));
     setOpenTaskId(null);
     const { error } = await db.from("tasks").delete().eq("id", id);
-    if (error) showErr("Could not delete task.");
+    if (error) {
+      setTasks(prev => { const next = prev.slice(); next.splice(idx, 0, row); return next; });
+      showErr("Could not delete task.");
+    }
   }
 
   async function addItem(bucket, text) {
@@ -1468,10 +1477,16 @@ function Dashboard({ db, onSignOut }) {
   }
 
   async function deleteResearch(id) {
+    const idx = research.findIndex(r => r.id === id);
+    if (idx === -1) return;
+    const row = research[idx];
     setRes(prev => prev.filter(r => r.id !== id));
     setOpenResId(null);
     const { error } = await db.from("research").delete().eq("id", id);
-    if (error) showErr("Could not delete research.");
+    if (error) {
+      setRes(prev => { const next = prev.slice(); next.splice(idx, 0, row); return next; });
+      showErr("Could not delete research.");
+    }
   }
 
   /* ── priority queue ── */
