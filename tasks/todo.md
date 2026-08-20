@@ -10,6 +10,7 @@ Plan and architecture decisions: [`tasks/plan.md`](plan.md). Spec: [`PLAN.md`](.
 Conventions used below:
 - `SUPABASE_URL` = `https://eefycklvsmuqhdckymmw.supabase.co`, `ANON` = the publishable
   key currently hardcoded at `index.html:462`.
+- Deployed: <https://life-os-board.vercel.app/> (currently v1.0.9, pre-gate).
 - Local preview: `npx serve -p 3000 .` (already configured in `.claude/launch.json`).
 - There is no test runner or build step in this repo, by decision D7.
 
@@ -17,7 +18,7 @@ Conventions used below:
 
 ## Phase 1 — Auth and RLS
 
-## Task 1: Resume the paused Supabase project and confirm data survived — ⛔ NEEDS JORDAN
+## Task 1: Resume the paused Supabase project and confirm data survived — ✅ DONE 2026-08-19
 
 **Description:** Project ref `eefycklvsmuqhdckymmw` is paused, not deleted. Resume it
 from the Supabase dashboard and prove the existing `tasks` and `research` rows are
@@ -25,13 +26,13 @@ intact before anything is built on top of them. Nothing else in the plan is safe
 start until this is confirmed.
 
 **Acceptance criteria:**
-- [ ] Project status is Active in the Supabase dashboard
-- [ ] `tasks` and `research` return their pre-pause rows, not empty sets
-- [ ] The deployed app at its Vercel URL loads real data again
+- [x] Project status is Active in the Supabase dashboard
+- [x] `tasks` and `research` return their pre-pause rows, not empty sets
+- [x] The deployed app at its Vercel URL loads real data again
 
 **Verification:**
-- [ ] `curl -s "$SUPABASE_URL/rest/v1/tasks?select=id,title&limit=5" -H "apikey: $ANON"` returns rows
-- [ ] Manual check: open the deployed app; Today view lists existing tasks
+- [x] `curl -s "$SUPABASE_URL/rest/v1/tasks?select=id,title&limit=5" -H "apikey: $ANON"` returns rows
+- [x] Manual check: open the deployed app; Today view lists existing tasks
 
 **Dependencies:** None
 **Files likely touched:** None
@@ -39,7 +40,7 @@ start until this is confirmed.
 
 ---
 
-## Task 2: Create the single Supabase Auth account — ⛔ NEEDS JORDAN
+## Task 2: Create the single Supabase Auth account — ✅ DONE 2026-08-19
 
 **Description:** Create one email/password user in Supabase Auth for Jordan. This
 account is both the app's login (until Task 10 swaps the app to Google sign-in) and
@@ -47,13 +48,13 @@ the Shortcut's credential under decision D2. Disable public sign-ups so the proj
 cannot accumulate other accounts.
 
 **Acceptance criteria:**
-- [ ] Exactly one user exists in Auth → Users
-- [ ] New user sign-ups are disabled in Auth settings
-- [ ] A password-grant token request returns a JWT (this is the mechanism Task 6 depends on)
+- [x] Exactly one user exists in Auth → Users
+- [x] New user sign-ups are disabled in Auth settings
+- [x] A password-grant token request returns a JWT (this is the mechanism Task 6 depends on)
 
 **Verification:**
-- [ ] `curl -s -X POST "$SUPABASE_URL/auth/v1/token?grant_type=password" -H "apikey: $ANON" -H "Content-Type: application/json" -d '{"email":"...","password":"..."}'` returns an `access_token`
-- [ ] Auth → Users shows one row
+- [x] `curl -s -X POST "$SUPABASE_URL/auth/v1/token?grant_type=password" -H "apikey: $ANON" -H "Content-Type: application/json" -d '{"email":"...","password":"..."}'` returns an `access_token`
+- [x] Auth → Users shows one row
 
 **Dependencies:** Task 1
 **Files likely touched:** None (dashboard configuration)
@@ -188,7 +189,7 @@ masquerade as a free day. Update the doc to match what was actually built.
 
 ---
 
-## Task 8: Render the work calendar panel with the staleness banner
+## Task 8: Render the work calendar panel with the staleness banner — 🟡 SHELL BUILT v1.2.0, not wired
 
 **Description:** Add a calendar panel to `TodayView` (`index.html:991`) showing today's
 `work_events`, alongside the existing task columns. Fetch `work_events_freshness` in
@@ -205,6 +206,12 @@ this is the panel's main job, not decoration.
 - [ ] Manual check against the phone's Calendar app for today
 - [ ] Force staleness (temporarily backdate `synced_at` on the newest row) and confirm the banner appears; restore afterwards
 - [ ] Check both viewports in the browser preview; console clean
+
+> `CalendarPanel` exists in `index.html` with all states rendered (loading, not
+> connected, free day, stale+empty, events, stale+events, error) and is fed
+> `{ status: "unconfigured" }` from `Dashboard`. Remaining work is the fetch:
+> today's `work_events` plus `work_events_freshness`, mapped to
+> `{ id, startsAt, allDay, title, location, source }` and `staleHours`.
 
 **Dependencies:** Task 5 (can be built against hand-inserted rows before Task 6 lands)
 **Files likely touched:** `index.html`
@@ -335,7 +342,7 @@ reads the inbox standalone — no cross-referencing tasks, contacts or calendar 
 
 ---
 
-## Task 13: Email triage panel
+## Task 13: Email triage panel — 🟡 SHELL BUILT v1.2.0, not wired
 
 **Description:** Render the two emails as the third panel: sender, subject, the "why it
 matters" line, and a tap-out link to the message in Gmail. Surfacing and explaining
@@ -351,6 +358,10 @@ stored anywhere (spec §1).
 - [ ] Manual check: both links open the correct threads on both devices
 - [ ] Force a fetch failure and confirm the labelled state
 - [ ] Confirm nothing from the message body is written to Supabase or `localStorage`
+
+> `EmailPanel` exists with loading / not-connected / empty / two-picks / error
+> states. Remaining work is the fetch and ranking, mapped to
+> `{ id, from, subject, why, age, url }`.
 
 **Dependencies:** Task 12
 **Files likely touched:** `index.html`
