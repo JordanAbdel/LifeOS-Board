@@ -196,13 +196,6 @@ section.block { margin-bottom: 44px; }
 .pq-age { font-family: var(--font-mono); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .pq-due { font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; }
 .pq-due.over { color: var(--warn); }
-.pq-act { text-align: right; }
-.pq-act button {
-  background: transparent; border: 0; color: var(--muted);
-  padding: 4px 8px; border-radius: 999px; font-size: 12px;
-  transition: color .15s ease, background .15s ease;
-}
-.pq-act button:hover { color: var(--ink); background: var(--surface-2); }
 
 /* ─── task hub ─── */
 .hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -449,7 +442,6 @@ section.block { margin-bottom: 44px; }
 @media (max-width: 1100px) {
   .research-grid { grid-template-columns: repeat(2, 1fr); }
   .pq li { grid-template-columns: 24px 90px 1fr 80px 90px; }
-  .pq li .pq-act { display: none; }
 }
 
 /* Tablet + large phones */
@@ -505,7 +497,7 @@ section.block { margin-bottom: 44px; }
   .pq-pill { display: none; }
   .pq-title { grid-column: 2; grid-row: 1; }
   .pq-source { grid-column: 2; grid-row: 2; }
-  .pq-age, .pq-due, .pq-act { display: none; }
+  .pq-age, .pq-due { display: none; }
 }
 
 /* Small phones — iPhone SE (375px) through iPhone 15 Pro Max (430px) */
@@ -749,7 +741,7 @@ function QuickCapture({ onAdd, defaultBucket = "personal" }) {
 
 /* ─────────────── priority queue ─────────────── */
 
-function PriorityQueue({ items, onMarkDone }) {
+function PriorityQueue({ items }) {
   if (items.length === 0) {
     return (
       <section className="block">
@@ -1262,7 +1254,7 @@ function TodayView({ tasks, onToggle, onSave, onDelete, openId, setOpenId, flash
         <QuickCapture onAdd={onAddCapture} />
       </div>
 
-      <PriorityQueue items={priorityItems} onMarkDone={onToggle} />
+      <PriorityQueue items={priorityItems} />
 
       <section className="block">
         <div className="eyebrow">
