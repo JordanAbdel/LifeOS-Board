@@ -27,9 +27,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=Geist+Mono:wght@400;500&family=Geist:wght@400;500;600&display=swap" rel="stylesheet" />
 <style>
 /* ─── tokens ─── */
+/* --muted-2 is now a non-text token only (the hero dot, the stalled progress
+   fill). Every text tier that used it failed WCAG AA, and the minimum passing
+   value turned out to be --muted itself, so the third text tier collapsed. */
 :root {
   --bg: #faf7f2; --surface: #ffffff; --surface-2: #f4efe5;
-  --ink: #1a1814; --ink-2: #3a342c; --muted: #8a8377; --muted-2: #b8b1a3;
+  /* --muted/-2 are darker than they look "designed" because the light palette
+     has to clear WCAG AA 4.5:1 against all three light surfaces (#ffffff,
+     #faf7f2, #f4efe5). The previous #8a8377/#b8b1a3 measured 3.5–3.8 and
+     2.0–2.1 respectively. Dark theme already passes and is unchanged. */
+  --ink: #1a1814; --ink-2: #3a342c; --muted: #6f6a5e; --muted-2: #8a8377;
   --line: #ebe5d6; --line-2: #e0d9c7;
   --accent: #c96442; --accent-soft: #f4e3d8; --accent-ink: #7a3a22;
   --warn: #b44d28; --warn-soft: #f7dccb;
@@ -75,7 +82,7 @@ input:focus, textarea:focus, select:focus { outline: none; }
 .brand-mark em { color: var(--accent); font-style: italic; font-weight: 400; }
 .brand-sub { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .brand-version {
-  font-family: var(--font-mono); font-size: 10px; color: var(--muted-2);
+  font-family: var(--font-mono); font-size: 10px; color: var(--muted);
   letter-spacing: 0.04em; margin-top: 2px;
 }
 .nav { display: flex; flex-direction: column; gap: 2px; }
@@ -126,7 +133,7 @@ main { padding: 32px 48px 80px; max-width: 1240px; }
 .capture:focus-within { border-color: var(--accent); }
 .capture .cap-icon { display: flex; align-items: center; padding: 0 6px 0 16px; color: var(--muted); }
 .capture input { flex: 1; border: 0; background: transparent; padding: 10px 12px; font-size: 13px; min-width: 0; }
-.capture input::placeholder { color: var(--muted-2); }
+.capture input::placeholder { color: var(--muted); }
 .capture select {
   border: 0; background: transparent;
   border-left: 1px solid var(--line); padding: 0 12px;
@@ -151,7 +158,7 @@ section.block { margin-bottom: 44px; }
   font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
   margin-bottom: 8px; display: flex; align-items: baseline; gap: 12px;
 }
-.eyebrow .eyebrow-meta { color: var(--muted-2); letter-spacing: 0; text-transform: none; font-family: var(--font-mono); font-size: 11px; }
+.eyebrow .eyebrow-meta { color: var(--muted); letter-spacing: 0; text-transform: none; font-family: var(--font-mono); font-size: 11px; }
 .section-title { font-family: var(--font-serif); font-size: 19px; letter-spacing: -0.01em; font-weight: 500; margin: 0 0 16px; }
 .section-title em { font-style: italic; color: var(--accent); font-weight: 400; }
 
@@ -186,7 +193,7 @@ section.block { margin-bottom: 44px; }
 .pq-pill.blk  { color: var(--muted); border-style: dashed; }
 .pq-title { color: var(--ink); }
 .pq-source { font-size: 11px; color: var(--muted); font-family: var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; }
-.pq-age { font-family: var(--font-mono); font-size: 11px; color: var(--muted-2); font-variant-numeric: tabular-nums; }
+.pq-age { font-family: var(--font-mono); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .pq-due { font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; }
 .pq-due.over { color: var(--warn); }
 .pq-act { text-align: right; }
@@ -246,7 +253,13 @@ section.block { margin-bottom: 44px; }
   cursor: pointer; transition: background .15s ease;
 }
 .task-main:hover { background: var(--surface-2); }
-.task-chev { color: var(--muted); display: flex; align-items: center; justify-content: center; }
+.task-chev {
+  color: var(--muted); display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 0; padding: 0; border-radius: 999px;
+  transition: color .15s ease;
+}
+.task-chev:hover { color: var(--ink); }
+.task-chev:focus-visible, .check:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @keyframes flash { 0% { background: var(--accent-soft); } 100% { background: transparent; } }
 
 .check {
@@ -264,8 +277,8 @@ section.block { margin-bottom: 44px; }
 .task-title { color: var(--ink); font-size: 13.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .task-sub { color: var(--muted); font-size: 11.5px; margin-top: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .note-snip { font-family: var(--font-mono); letter-spacing: 0.02em; color: var(--muted); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.age-snip { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted-2); white-space: nowrap; }
-.inline-pill { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn); }
+.age-snip { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+.inline-pill { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: var(--warn-soft); color: var(--ink-2); border: 1px solid var(--warn); }
 
 .pri { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px; color: var(--muted); }
 .pri.high { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
@@ -274,6 +287,71 @@ section.block { margin-bottom: 44px; }
 .due { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
 .due.over { color: var(--warn); }
 .due.soon { color: var(--accent); }
+
+/* ─── today panels (calendar · email) ─── */
+.panel { padding: 18px 18px 16px; display: flex; flex-direction: column; }
+.panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.panel-head h3 { margin: 0; font-family: var(--font-serif); font-size: 18px; font-weight: 500; letter-spacing: -0.01em; }
+.panel-meta { font-size: 11.5px; color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* state notes — one shared shape so free day / stale / error stay siblings, not specials */
+.panel-note { display: flex; align-items: flex-start; gap: 10px; padding: 14px 4px; font-size: 13px; color: var(--muted); }
+.panel-note .panel-note-ico { flex-shrink: 0; margin-top: 1px; color: var(--muted-2); }
+.panel-note-body { min-width: 0; }
+.panel-note-title { color: var(--ink-2); }
+.panel-note-sub { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+.panel-note.warn { color: var(--warn); }
+.panel-note.warn .panel-note-ico { color: var(--warn); }
+.panel-note.warn .panel-note-title { color: var(--warn); }
+.panel-note.quiet .panel-note-title { font-family: var(--font-serif); font-size: 15px; font-style: italic; color: var(--muted); }
+
+/* stale sync — deliberately louder than an empty day (Task 8) */
+.stale-banner {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--warn); background: var(--warn-soft);
+  /* Body text is --ink-2, not --warn: warn-on-warn-soft measures 4.33:1, under
+     the 4.5:1 AA floor for text this size. The warning still reads through the
+     border, fill and icon, so the signal never depends on the text colour. */
+  color: var(--ink-2);
+  border-radius: var(--radius-sm); padding: 8px 11px;
+  font-size: 12px; margin-bottom: 10px;
+}
+.stale-banner svg { color: var(--warn); flex-shrink: 0; }
+.stale-banner .stale-age { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* event list */
+.ev-list { list-style: none; margin: 0; padding: 0; }
+.ev { display: grid; grid-template-columns: 62px 1fr auto; gap: 12px; align-items: baseline;
+      padding: 10px 4px; border-top: 1px solid var(--line); }
+.ev:first-child { border-top: 0; }
+.ev.now { background: linear-gradient(90deg, var(--accent-soft) 0%, transparent 80%); border-radius: 8px; margin: 0 -4px; padding: 10px 8px; }
+.ev-time { font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ev-time.all-day { color: var(--muted); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; }
+.ev-body { min-width: 0; }
+.ev-title { display: block; font-size: 13.5px; color: var(--ink); }
+.ev-loc { display: block; font-size: 11.5px; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-src { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+          color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 7px; white-space: nowrap; }
+.ev-src.work { color: var(--accent-ink); border-color: var(--accent); background: var(--accent-soft); }
+
+/* email triage — two items, reason line is the point */
+.mail-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.mail { display: block; border-top: 1px solid var(--line); padding: 12px 4px; text-decoration: none; color: inherit; border-radius: 8px; transition: background .15s ease; }
+.mail:first-child { border-top: 0; }
+.mail:hover { background: var(--surface-2); }
+.mail:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.mail-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.mail-from { font-size: 13px; color: var(--ink); }
+.mail-age { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+.mail-subj { display: block; font-size: 12.5px; color: var(--ink-2); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mail-why { display: block; font-family: var(--font-serif); font-style: italic; font-size: 13px; color: var(--ink-2); margin-top: 6px; line-height: 1.45; text-wrap: pretty; }
+
+/* skeletons — content-shaped, not a spinner (panels load independently of tasks) */
+.skel { background: var(--surface-2); border-radius: 6px; animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.skel-row { display: grid; grid-template-columns: 62px 1fr; gap: 12px; padding: 11px 4px; border-top: 1px solid var(--line); }
+.skel-row:first-child { border-top: 0; }
+.skel-line { height: 10px; }
 
 /* ─── research ─── */
 .research-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
@@ -303,12 +381,12 @@ section.block { margin-bottom: 44px; }
 .ed-row { display: flex; flex-direction: column; gap: 5px; }
 .ed-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .ed-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.ed-meta  { font-size: 11px; color: var(--muted-2); font-family: var(--font-mono); }
+.ed-meta  { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
 .ed-input { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 13px; color: var(--ink); font-family: var(--font-sans); transition: border-color .15s ease; resize: vertical; }
 .ed-input.inline { padding: 6px 10px; flex: 1; }
 .ed-input:focus { border-color: var(--accent); }
 .ed-input[type="date"] { font-family: var(--font-mono); font-size: 12px; }
-.ed-input::placeholder { color: var(--muted-2); }
+.ed-input::placeholder { color: var(--muted); }
 .seg { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .seg-btn { background: transparent; border: 1px solid var(--line); color: var(--ink-2); border-radius: 999px; padding: 5px 12px; font-size: 12px; transition: border-color .15s ease, background .15s ease, color .15s ease; }
 .seg-btn:hover { border-color: var(--line-2); }
@@ -351,10 +429,13 @@ section.block { margin-bottom: 44px; }
 .error-banner {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
   background: var(--warn-soft); border: 1px solid var(--warn); border-radius: var(--radius);
-  padding: 12px 20px; font-size: 13px; color: var(--warn); z-index: 100;
+  padding: 12px 20px; font-size: 13px; color: var(--ink-2); z-index: 100;
   display: flex; align-items: center; gap: 12px;
   animation: slideUp .25s ease;
 }
+/* Same reason as .stale-banner: --warn on --warn-soft measures 4.0-4.3:1, under
+   the AA floor. The icon and border carry the warning; the text stays legible. */
+.error-banner svg { color: var(--warn); flex-shrink: 0; }
 @keyframes slideUp { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
 /* ─── auth gate ─── */
@@ -439,6 +520,10 @@ section.block { margin-bottom: 44px; }
   .rcard { padding: 14px 14px 10px; }
   .rcard-name { font-size: 15px; }
   .task-col { padding: 14px 14px 6px; }
+  .panel { padding: 14px 14px 12px; }
+  /* source pill drops to its own line rather than squeezing the title */
+  .ev { grid-template-columns: 54px 1fr; grid-template-rows: auto auto; gap: 2px 10px; }
+  .ev-src { grid-column: 2; justify-self: start; margin-top: 4px; }
   .pq { padding: 4px 12px; }
   .pq li { padding: 10px 6px; }
 
@@ -462,7 +547,7 @@ section.block { margin-bottom: 44px; }
 /* ── Life Dashboard v1.0.0 ── */
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
-const VERSION = "v1.1.0";
+const VERSION = "v1.2.0";
 
 const SUPABASE_URL = "https://eefycklvsmuqhdckymmw.supabase.co";
 const SUPABASE_KEY = "sb_publishable_FMQM5VuVnpCB2Uy3JR0Hwg_F27EuqfM";
@@ -565,6 +650,10 @@ const IconTrash = (p) => (<svg width="13" height="13" viewBox="0 0 24 24" fill="
 const IconChev  = (p) => (<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M6 9l6 6 6-6" /></svg>);
 const IconExit  = (p) => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>);
 const IconDisc  = (p) => (<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" {...p}><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" /></svg>);
+const IconCal   = (p) => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...p}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>);
+const IconMail  = (p) => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...p}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>);
+const IconAlert = (p) => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg>);
+const IconPlug  = (p) => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M9 2v6M15 2v6M6 8h12v3a6 6 0 0 1-12 0V8ZM12 17v5" /></svg>);
 
 const Check = ({ on, onClick, ariaLabel }) => (
   <button className={`check ${on ? "checked" : ""}`} aria-label={ariaLabel} aria-pressed={on}
@@ -590,11 +679,11 @@ function Sidebar({ theme, onToggleTheme, view, setView, counts, onSignOut }) {
       </div>
       <nav className="nav" aria-label="Sections">
         <div className="nav-eyebrow">Workspace</div>
-        <button className={`nav-item ${view === "today" ? "active" : ""}`} onClick={() => setView("today")}>
+        <button className={`nav-item ${view === "today" ? "active" : ""}`} aria-current={view === "today" ? "page" : undefined} onClick={() => setView("today")}>
           <span>Today</span>
           <span className="count">{counts.priority}</span>
         </button>
-        <button className={`nav-item ${view === "research" ? "active" : ""}`} onClick={() => setView("research")}>
+        <button className={`nav-item ${view === "research" ? "active" : ""}`} aria-current={view === "research" ? "page" : undefined} onClick={() => setView("research")}>
           <span>Research</span>
           <span className="count">{counts.research}</span>
         </button>
@@ -819,9 +908,15 @@ function TaskRow({ task, isOpen, onToggle, onCheck, onSave, onDelete, onClose, f
         </div>
         <span className={`pri ${task.pri}`}>{task.pri === "high" ? "High" : task.pri === "med" ? "Med" : "Low"}</span>
         <span className={`due ${isOver ? "over" : (isSoon ? "soon" : "")}`}>{task.due ? relDue(task.due) : "—"}</span>
-        <span className="task-chev" aria-hidden>
+        {/* The row div stays clickable for pointer users, but the keyboard and
+            screen-reader path is this button — a div with onClick was reachable
+            by neither, and the row cannot itself be a button because it already
+            contains one (the checkbox). */}
+        <button className="task-chev" aria-expanded={isOpen}
+          aria-label={`${isOpen ? "Hide" : "Show"} details for "${task.title}"`}
+          onClick={(e) => { e.stopPropagation(); onToggle(); }}>
           <IconChev style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "transform .2s" }} />
-        </span>
+        </button>
       </div>
       {isOpen && (
         <TaskEditor task={task} onSave={onSave} onDelete={onDelete} onClose={onClose} busy={saveBusy} />
@@ -997,9 +1092,159 @@ function ResearchCard({ r, isOpen, onToggle, onSave, onDelete, saveBusy }) {
   );
 }
 
+/* ─────────────── today panels ─────────────── */
+
+/* The user is in Australia/Sydney and the work calendar's times come from the
+   phone as UTC timestamps, so formatting is pinned to that zone rather than the
+   browser's — a Mac travelling would otherwise silently shift meeting times. */
+const TZ = "Australia/Sydney";
+
+function fmtEventTime(iso) {
+  return new Intl.DateTimeFormat("en-AU", {
+    hour: "numeric", minute: "2-digit", hour12: true, timeZone: TZ,
+  }).format(new Date(iso)).replace(/\s?(am|pm)/i, m => m.trim().toLowerCase());
+}
+
+/* Shared shape for "nothing here, and here is why" so a free day, a stale sync
+   and a broken connection read as three answers to one question rather than
+   three unrelated screens. */
+function PanelNote({ icon, title, sub, tone = "" }) {
+  return (
+    <div className={`panel-note ${tone}`} role="status">
+      <span className="panel-note-ico" aria-hidden>{icon}</span>
+      <div className="panel-note-body">
+        <div className="panel-note-title">{title}</div>
+        {sub && <div className="panel-note-sub">{sub}</div>}
+      </div>
+    </div>
+  );
+}
+
+function PanelSkeleton({ rows = 3, label }) {
+  return (
+    <div aria-busy="true" aria-label={label}>
+      {Array.from({ length: rows }).map((_, i) => (
+        <div className="skel-row" key={i}>
+          <div className="skel skel-line" style={{ width: "70%" }} />
+          <div className="skel skel-line" style={{ width: `${85 - i * 15}%` }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* Task 8. The panel's job is that a free day and a failed sync never look alike,
+   so staleness is a banner above the list rather than a variant of the empty
+   state — it has to be visible whether or not any events came through. */
+function CalendarPanel({ status, events = [], staleHours }) {
+  const isStale = typeof staleHours === "number" && staleHours >= 8;
+
+  return (
+    <section className="card panel" aria-labelledby="cal-h">
+      <div className="panel-head">
+        <h3 id="cal-h">Today</h3>
+        <span className="panel-meta">
+          {status === "ready" && events.length > 0 ? `${events.length} event${events.length === 1 ? "" : "s"}` : ""}
+        </span>
+      </div>
+
+      {status === "loading" && <PanelSkeleton rows={3} label="Loading today's calendar" />}
+
+      {status === "unconfigured" && (
+        <PanelNote icon={<IconPlug />} title="Calendar not connected yet"
+          sub="The work calendar arrives from the iPhone Shortcut; Google calendars follow after sign-in." />
+      )}
+
+      {status === "error" && (
+        <PanelNote icon={<IconAlert />} tone="warn" title="Couldn't load the calendar"
+          sub="Showing nothing rather than a day that might be wrong." />
+      )}
+
+      {status === "ready" && (
+        <>
+          {isStale && (
+            <div className="stale-banner" role="alert">
+              <IconAlert aria-hidden />
+              <span>Last synced <span className="stale-age">{Math.round(staleHours)}h</span> ago — this may not be today's real schedule.</span>
+            </div>
+          )}
+          {events.length === 0
+            ? (isStale
+                ? <PanelNote icon={<IconCal />} title="No events received"
+                    sub="The sync is stale, so this is not necessarily a free day." />
+                : <PanelNote icon={<IconCal />} tone="quiet" title="Nothing scheduled. The day is yours." />)
+            : (
+              <ul className="ev-list">
+                {events.map(ev => (
+                  <li className={`ev ${ev.now ? "now" : ""}`} key={ev.id}>
+                    <span className={`ev-time ${ev.allDay ? "all-day" : ""}`}>
+                      {ev.allDay ? "All day" : fmtEventTime(ev.startsAt)}
+                    </span>
+                    <span className="ev-body">
+                      <span className="ev-title">{ev.title}</span>
+                      {ev.location && <span className="ev-loc">{ev.location}</span>}
+                    </span>
+                    <span className={`ev-src ${ev.source === "work" ? "work" : ""}`}>{ev.source}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+        </>
+      )}
+    </section>
+  );
+}
+
+/* Task 13. Surfaces and explains only — each item taps out to Gmail, nothing is
+   read, replied to or stored here (spec §1). No unread count anywhere: the spec
+   rejects badges explicitly. */
+function EmailPanel({ status, items = [] }) {
+  return (
+    <section className="card panel" aria-labelledby="mail-h">
+      <div className="panel-head">
+        <h3 id="mail-h">Worth a look</h3>
+        <span className="panel-meta">{status === "ready" && items.length > 0 ? "top 2" : ""}</span>
+      </div>
+
+      {status === "loading" && <PanelSkeleton rows={2} label="Loading email triage" />}
+
+      {status === "unconfigured" && (
+        <PanelNote icon={<IconPlug />} title="Gmail not connected yet"
+          sub="Signing in with Google turns this on." />
+      )}
+
+      {status === "error" && (
+        <PanelNote icon={<IconAlert />} tone="warn" title="Couldn't reach Gmail"
+          sub="Nothing is shown rather than a stale pick." />
+      )}
+
+      {status === "ready" && (
+        items.length === 0
+          ? <PanelNote icon={<IconMail />} tone="quiet" title="Nothing needs an answer today." />
+          : (
+            <ul className="mail-list">
+              {items.map(m => (
+                <li key={m.id}>
+                  <a className="mail" href={m.url} target="_blank" rel="noopener noreferrer">
+                    <span className="mail-top">
+                      <span className="mail-from">{m.from}</span>
+                      <span className="mail-age">{m.age}</span>
+                    </span>
+                    <span className="mail-subj">{m.subject}</span>
+                    <span className="mail-why">{m.why}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )
+      )}
+    </section>
+  );
+}
+
 /* ─────────────── today view ─────────────── */
 
-function TodayView({ tasks, onToggle, onSave, onDelete, openId, setOpenId, flashId, saveBusy, priorityItems, onAddCapture }) {
+function TodayView({ tasks, onToggle, onSave, onDelete, openId, setOpenId, flashId, saveBusy, priorityItems, onAddCapture, calendar, email }) {
   const personal = tasks.filter(t => t.kind === "personal");
   const work     = tasks.filter(t => t.kind === "work");
 
@@ -1018,6 +1263,18 @@ function TodayView({ tasks, onToggle, onSave, onDelete, openId, setOpenId, flash
       </div>
 
       <PriorityQueue items={priorityItems} onMarkDone={onToggle} />
+
+      <section className="block">
+        <div className="eyebrow">
+          <span>What's on</span>
+          <span className="eyebrow-meta">calendar · inbox</span>
+        </div>
+        <h2 className="section-title">The <em>day</em></h2>
+        <div className="hub-grid">
+          <CalendarPanel {...calendar} />
+          <EmailPanel {...email} />
+        </div>
+      </section>
 
       <section className="block">
         <div className="eyebrow">
@@ -1265,6 +1522,14 @@ function Dashboard({ db, onSignOut }) {
     research: research.filter(r => r.status !== "complete").length,
   };
 
+  /* Panel shells only. `work_events` does not exist until Task 5 runs and Gmail
+     needs Task 9's OAuth client, so neither panel fetches anything yet — wiring
+     them is Task 8 (calendar), Task 11 (Google merge) and Task 13 (email). They
+     render "not connected" until then rather than an error, because nothing is
+     broken; it is simply not built. */
+  const calendarState = { status: "unconfigured" };
+  const emailState    = { status: "unconfigured" };
+
   if (loading) {
     return (
       <div className="loading-screen">
@@ -1284,6 +1549,7 @@ function Dashboard({ db, onSignOut }) {
             tasks={tasks} onToggle={toggleTaskDone} onSave={saveTask} onDelete={deleteTask}
             openId={openTaskId} setOpenId={setOpenTaskId} flashId={flashId}
             saveBusy={saveBusy} priorityItems={priorityItems} onAddCapture={addItem}
+            calendar={calendarState} email={emailState}
           />
         )}
         {view === "research" && (
@@ -1296,7 +1562,7 @@ function Dashboard({ db, onSignOut }) {
       </main>
 
       {error && (
-        <div className="error-banner">
+        <div className="error-banner" role="alert">
           <IconDisc />
           {error}
           <button className="ghost" style={{padding:"2px 8px"}} onClick={() => setError(null)}>×</button>

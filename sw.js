@@ -1,9 +1,9 @@
-/* Life Dashboard — Service Worker v1.1.0
+/* Life Dashboard — Service Worker v1.2.0
    Network-first strategy: always tries the network, falls back to cache.
    This ensures you always get fresh data from Supabase.
 */
 
-const CACHE = "ld-v1.1.0";
+const CACHE = "ld-v1.2.0";
 
 const PRECACHE = [
   "/",
