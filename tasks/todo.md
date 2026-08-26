@@ -343,11 +343,17 @@ calendar volume is sports and a naive all-calendars view is mostly game times.
 > message rather than a Gmail payload, and returns exactly the shape `EmailPanel`
 > already renders. Verified against four fabricated inbox shapes.
 >
-> **Remaining: the fetch.** `messages.list` with `in:inbox -from:me`, then
-> `messages.get(format: "metadata")` for headers, `snippet`, `labelIds` and
-> `internalDate`, mapped to `{ id, threadId, from:{name,email}, to[], cc[],
-> subject, snippet, receivedAt, labels[], hasListUnsubscribe, isCalendarInvite,
-> threadLength }`. Needs a `provider_token`, so it waits on Tasks 9-10.
+> Parsing landed 2026-08-26 too: `toInboxMessage` plus `header`,
+> `splitAddressList` and `parseAddress`, checked against nine payload shapes.
+> Case-folded header lookup, comma-safe address splitting and both calendar-invite
+> shapes are covered.
+>
+> **Remaining: the HTTP call only.** `messages.list` with `in:inbox -from:me`,
+> then `messages.get(format: "METADATA", metadataHeaders: [From, To, Cc, Subject,
+> List-Unsubscribe, Content-Type])`, grouping the list response by `threadId` to
+> supply `threadLength`. Feed each result through `toInboxMessage` then
+> `rankInbox`. Needs a `provider_token`, so it waits on Tasks 9-10 — and it is
+> now the only unwritten part.
 >
 > **Not yet done and it is the point of the task:** judging the picks against
 > Jordan's real inbox on three different days. The heuristic is untested against
