@@ -546,6 +546,14 @@ const SUPABASE_KEY = "sb_publishable_FMQM5VuVnpCB2Uy3JR0Hwg_F27EuqfM";
 const THEME_KEY    = "ld-theme";
 const WORK_TAGS   = ["tech-viz","pipeline","vendor","review","hiring","bug","color"];
 
+/* Decision D4's "small known-sender list". A name or address matching any entry
+   gets the single largest boost in the ranking, so keep this to people whose
+   mail genuinely should interrupt a morning — it stops being a signal the moment
+   it becomes a contact list. Matching is substring, case-insensitive, against
+   both the display name and the address. Safe to leave empty: every other signal
+   still works. */
+const KNOWN_SENDERS = [];
+
 
 /* ─────────────── date helpers ─────────────── */
 
@@ -1225,6 +1233,144 @@ function CalendarPanel({ status, events = [], staleHours }) {
       )}
     </section>
   );
+}
+
+/* ── Task 12: inbox ranking (decision D4) ──────────────────────────────────
+   Deterministic scoring, no model call. The reason this is a block of pure
+   functions rather than logic inside the panel is D4's escape hatch: if the
+   heuristic picks badly against a real inbox, rankInbox is the only thing that
+   has to be replaced, and the panel never learns the difference.
+
+   Nothing here reads tasks, contacts or the calendar. The spec rules that out
+   directly (PLAN.md §2): the people who matter most reach Jordan on iMessage,
+   so cross-referencing would fire almost never and cost the ranking its nerve.
+
+   Input is a normalised message, not a Gmail payload — see toInboxMessage. */
+
+const ASK_PHRASES = [
+  "can you", "could you", "would you", "are you able",
+  "let me know", "thoughts?", "any update", "following up", "circling back",
+  "please review", "please confirm", "needs your", "waiting on you",
+  "sign off", "approve", "deadline", "by end of", "by friday", "by monday",
+];
+
+const NOREPLY = /(^|[.\-_])(no-?reply|do-?not-?reply|notifications?|mailer|automated)([.\-_]|@)/i;
+
+/* Age is the signal most likely to be read backwards, so it is a named curve
+   rather than an inline expression. Something that landed twenty minutes ago is
+   not "unanswered", it is just new; the pressure builds over the first day,
+   holds while it is genuinely outstanding, then decays because a ten-day-old
+   thread nobody chased is almost never today's problem. */
+function agePoints(hours) {
+  if (hours < 2)   return 0;
+  if (hours < 24)  return Math.round(20 * (hours - 2) / 22);
+  if (hours < 72)  return 20;
+  if (hours < 240) return Math.round(20 * (240 - hours) / 168);
+  return 0;
+}
+
+function fmtAge(hours) {
+  if (hours < 1)  return "just now";
+  if (hours < 24) return `${Math.round(hours)}h`;
+  return `${Math.round(hours / 24)}d`;
+}
+
+/* Display names arrive as "Priya Raman" or, often enough, not at all. The
+   fallback takes the longest word in the address local part rather than the
+   whole thing, because "m.reyes@..." capitalises to "M.reyes" and reads like a
+   bug in the middle of a sentence; the longest chunk is the surname often
+   enough to be worth it, and is at least always a word. */
+function firstName(from) {
+  const name = (from.name || "").trim();
+  if (name) return name.split(/\s+/)[0];
+
+  const chunks = ((from.email || "").split("@")[0].match(/[a-z]+/gi) || [])
+    .sort((a, b) => b.length - a.length);
+  if (!chunks.length) return "Someone";
+  return chunks[0].charAt(0).toUpperCase() + chunks[0].slice(1).toLowerCase();
+}
+
+function isKnownSender(from) {
+  const hay = `${from.name || ""} ${from.email || ""}`.toLowerCase();
+  return KNOWN_SENDERS.some(entry => entry && hay.includes(entry.toLowerCase()));
+}
+
+/* Returns null for anything that should never be a pick, rather than scoring it
+   low — an excluded message must not be able to win a quiet inbox on points. */
+function scoreMessage(msg, { now, self }) {
+  if (msg.isCalendarInvite) return null;
+  if (NOREPLY.test(msg.from.email || "")) return null;
+  if ((msg.labels || []).some(l => l === "CATEGORY_PROMOTIONS" || l === "CATEGORY_SOCIAL")) return null;
+
+  const hours = (now - new Date(msg.receivedAt).getTime()) / 36e5;
+  if (hours < 0) return null;
+
+  const addressed = (list) => (list || []).some(a => a.toLowerCase() === self.toLowerCase());
+  const text = `${msg.subject || ""} ${msg.snippet || ""}`.toLowerCase();
+
+  const who = firstName(msg.from);
+
+  /* `info` is deliberately not `points`. The heaviest signal is almost always
+     "addressed to you directly", which is true of nearly every message that
+     scores well and therefore explains nothing — ranking the reason line by
+     score produced the same sentence for both picks. `info` ranks a signal by
+     how much it tells you that the other pick would not also say. */
+  const signals = [];
+  const add = (points, key, info, phrase) => { if (points) signals.push({ points, key, info, phrase }); };
+
+  if (isKnownSender(msg.from))        add(30, "known",  5, `${who} rarely emails`);
+  if (addressed(msg.to))              add(40, "direct", 1, "sent straight to you");
+  else if (addressed(msg.cc))         add(15, "cc",     2, "you're only cc'd");
+  else                                add(-35, "bulk",  0, null);
+  if (msg.hasListUnsubscribe)         add(-35, "list",  0, null);
+  if ((msg.labels || []).includes("CATEGORY_UPDATES")) add(-25, "updates", 0, null);
+
+  if (/\?/.test(text))                add(25, "question", 4, `${who} asked you a question`);
+  else if (ASK_PHRASES.some(pattern => text.includes(pattern)))
+                                      add(15, "ask",      4, `${who} needs something from you`);
+
+  if (msg.threadLength > 1)           add(10, "thread",   3, "part of a thread you're in");
+  add(agePoints(hours), "age", 0, null);
+
+  return { score: signals.reduce((sum, sig) => sum + sig.points, 0), signals, hours };
+}
+
+/* The "why it matters" line: the single most informative signal, plus how long
+   it has been waiting. Two clauses, because a third stops being a reason and
+   starts being a description. Age is appended rather than ranked — it is the
+   thing most likely to differ between two otherwise similar picks, and it only
+   earns a mention once a message has survived a full day unanswered.
+   This is the other half of the D4 swap point: a model call would replace
+   exactly this function and rankInbox's use of it. */
+function explainMessage({ signals, hours }) {
+  const lead = signals
+    .filter(sig => sig.phrase && sig.points > 0)
+    .sort((a, b) => b.info - a.info)[0];
+
+  const waited = hours >= 24 ? `unanswered for ${fmtAge(hours)}` : null;
+  const parts = [lead && lead.phrase, waited].filter(Boolean);
+
+  if (parts.length === 0) return `Sitting in your inbox for ${fmtAge(hours)}.`;
+  const line = parts.join(" — ");
+  return line.charAt(0).toUpperCase() + line.slice(1) + ".";
+}
+
+/* Top two, highest first. Fewer than two is a real answer, not a failure: the
+   panel renders an empty inbox as "nothing needs an answer today". */
+function rankInbox(messages, { now = Date.now(), self, limit = 2 } = {}) {
+  return (messages || [])
+    .map(msg => ({ msg, scored: scoreMessage(msg, { now, self }) }))
+    .filter(row => row.scored && row.scored.score > 0)
+    .sort((a, b) => b.scored.score - a.scored.score)
+    .slice(0, limit)
+    .map(({ msg, scored }) => ({
+      id: msg.id,
+      from: msg.from.name || msg.from.email,
+      subject: msg.subject || "(no subject)",
+      why: explainMessage(scored),
+      age: fmtAge(scored.hours),
+      url: `https://mail.google.com/mail/u/0/#inbox/${msg.threadId || msg.id}`,
+    }));
 }
 
 /* Task 13. Surfaces and explains only — each item taps out to Gmail, nothing is
