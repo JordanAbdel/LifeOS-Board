@@ -625,6 +625,17 @@ function toTask(row) {
     createdAt: row.created_at, updatedAt: row.updated_at,
   };
 }
+function toWorkEvent(row) {
+  const now = Date.now();
+  const start = new Date(row.starts_at).getTime();
+  const end   = row.ends_at ? new Date(row.ends_at).getTime() : null;
+  return {
+    id: row.id, title: row.title,
+    startsAt: row.starts_at, allDay: row.all_day,
+    location: row.location || "", source: "work",
+    now: !row.all_day && start <= now && (end === null || now < end),
+  };
+}
 function toResearch(row) {
   return {
     id: row.id, name: row.name, status: row.status,
@@ -1097,6 +1108,35 @@ function fmtEventTime(iso) {
   }).format(new Date(iso)).replace(/\s?(am|pm)/i, m => m.trim().toLowerCase());
 }
 
+/* Midnight in Australia/Sydney, returned as a UTC instant so it can be compared
+   against the timestamptz column directly. dayOffset 0 opens today's window and
+   1 closes it.
+
+   The offset has to be the one in force at midnight, and there is no direct way
+   to ask for that — Intl reports the offset at an *instant*, and the instant is
+   what we are trying to find. So: seed from midday, then re-read the offset at
+   the instant that produced and rebuild. On the two changeover days the seed is
+   an hour out and the second pass corrects it; on every other day the offset is
+   the same at both times and the pass is a no-op. Getting this wrong costs the
+   first or last hour of the day twice a year, which is exactly the kind of
+   silent wrong-day this panel is supposed to make impossible.
+   Source: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat#timezonename */
+function sydneyMidnightUTC(dayOffset = 0) {
+  const ymd = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date(Date.now() + dayOffset * 864e5));
+
+  const offsetAt = (instant) => {
+    const gmt = new Intl.DateTimeFormat("en-AU", {
+      timeZone: TZ, timeZoneName: "longOffset",
+    }).formatToParts(instant).find(part => part.type === "timeZoneName").value;
+    return gmt.replace("GMT", "") || "+00:00";
+  };
+
+  const seed = new Date(`${ymd}T00:00:00${offsetAt(new Date(`${ymd}T12:00:00Z`))}`);
+  return new Date(`${ymd}T00:00:00${offsetAt(seed)}`).toISOString();
+}
+
 /* Shared shape for "nothing here, and here is why" so a free day, a stale sync
    and a broken connection read as three answers to one question rather than
    three unrelated screens. */
@@ -1353,6 +1393,7 @@ function Dashboard({ db, onSignOut }) {
   const [openTaskId, setOpenTaskId]   = useState(null);
   const [openResId,  setOpenResId]    = useState(null);
   const [flashId, setFlash]           = useState(null);
+  const [calendar, setCalendar]       = useState({ status: "loading" });
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -1379,6 +1420,47 @@ function Dashboard({ db, onSignOut }) {
       }
     }
     load();
+  }, []);
+
+  /* Task 8. Separate from the tasks load on purpose: work_events does not exist
+     until docs/work_events.sql is run, and a 404 there must not blank the task
+     columns. */
+  useEffect(() => {
+    async function loadCalendar() {
+      const [{ data: rows, error: ee }, { data: fresh, error: fe }] = await Promise.all([
+        db.from("work_events")
+          .select("*")
+          .gte("starts_at", sydneyMidnightUTC(0))
+          .lt("starts_at", sydneyMidnightUTC(1))
+          .order("starts_at", { ascending: true }),
+        db.from("work_events_freshness").select("last_sync").maybeSingle(),
+      ]);
+
+      /* PGRST205 is "table not in the schema cache", i.e. the SQL has not been
+         run yet. Nothing is broken, so it reports as not-connected rather than
+         as an error.
+         Source: https://docs.postgrest.org/en/v12/references/errors.html */
+      const err = ee || fe;
+      if (err) {
+        setCalendar({ status: err.code === "PGRST205" ? "unconfigured" : "error" });
+        return;
+      }
+
+      /* The table exists but has never received a sync: also not-connected. The
+         alternative reads as "the day is yours", which is the one lie this panel
+         is built to prevent. */
+      if (!fresh || !fresh.last_sync) {
+        setCalendar({ status: "unconfigured" });
+        return;
+      }
+
+      setCalendar({
+        status: "ready",
+        events: (rows || []).map(toWorkEvent),
+        staleHours: (Date.now() - new Date(fresh.last_sync).getTime()) / 36e5,
+      });
+    }
+    loadCalendar();
   }, []);
 
   function flash(id) { setFlash(id); setTimeout(() => setFlash(null), 700); }
@@ -1529,13 +1611,10 @@ function Dashboard({ db, onSignOut }) {
     research: research.filter(r => r.status !== "complete").length,
   };
 
-  /* Panel shells only. `work_events` does not exist until Task 5 runs and Gmail
-     needs Task 9's OAuth client, so neither panel fetches anything yet — wiring
-     them is Task 8 (calendar), Task 11 (Google merge) and Task 13 (email). They
-     render "not connected" until then rather than an error, because nothing is
-     broken; it is simply not built. */
-  const calendarState = { status: "unconfigured" };
-  const emailState    = { status: "unconfigured" };
+  /* Gmail still needs Task 9's OAuth client, so the email panel renders
+     "not connected" rather than an error — nothing is broken; it is simply not
+     built. Wiring it is Tasks 12-13. */
+  const emailState = { status: "unconfigured" };
 
   if (loading) {
     return (
@@ -1556,7 +1635,7 @@ function Dashboard({ db, onSignOut }) {
             tasks={tasks} onToggle={toggleTaskDone} onSave={saveTask} onDelete={deleteTask}
             openId={openTaskId} setOpenId={setOpenTaskId} flashId={flashId}
             saveBusy={saveBusy} priorityItems={priorityItems} onAddCapture={addItem}
-            calendar={calendarState} email={emailState}
+            calendar={calendar} email={emailState}
           />
         )}
         {view === "research" && (
