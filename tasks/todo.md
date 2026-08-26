@@ -335,7 +335,23 @@ calendar volume is sports and a naive all-calendars view is mostly game times.
 
 ## Phase 4 — Email triage and rename
 
-## Task 12: Gmail fetch + heuristic ranking (headless)
+## Task 12: Gmail fetch + heuristic ranking (headless) — 🟡 SCORING DONE v1.3.0, fetch blocked on Task 9
+
+> Ranking landed 2026-08-26: `scoreMessage`, `explainMessage` and `rankInbox` in
+> `index.html`, plus the `KNOWN_SENDERS` constant (empty — fill it in with the few
+> people whose mail should interrupt a morning). Pure, no I/O, takes a normalised
+> message rather than a Gmail payload, and returns exactly the shape `EmailPanel`
+> already renders. Verified against four fabricated inbox shapes.
+>
+> **Remaining: the fetch.** `messages.list` with `in:inbox -from:me`, then
+> `messages.get(format: "metadata")` for headers, `snippet`, `labelIds` and
+> `internalDate`, mapped to `{ id, threadId, from:{name,email}, to[], cc[],
+> subject, snippet, receivedAt, labels[], hasListUnsubscribe, isCalendarInvite,
+> threadLength }`. Needs a `provider_token`, so it waits on Tasks 9-10.
+>
+> **Not yet done and it is the point of the task:** judging the picks against
+> Jordan's real inbox on three different days. The heuristic is untested against
+> real mail; treat the weights as a first guess, not a finished answer.
 
 **Description:** Fetch recent inbox messages via the Gmail API and score them with the
 deterministic heuristic from decision D4 — direct-address vs. list, thread age,
