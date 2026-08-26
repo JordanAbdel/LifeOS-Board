@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>Life Dashboard</title>
+<title>LifeOS</title>
 
 <!-- PWA -->
 <link rel="manifest" href="/manifest.json" />
@@ -16,7 +16,7 @@
 <!-- iOS PWA -->
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Atelier" />
+<meta name="apple-mobile-web-app-title" content="LifeOS" />
 <link rel="apple-touch-icon" href="/icons/icon-180.png" />
 
 <!-- Favicon -->
@@ -536,10 +536,10 @@ section.block { margin-bottom: 44px; }
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
 <script type="text/babel">
-/* ── Life Dashboard v1.0.0 ── */
+/* ── LifeOS v1.3.0 ── */
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
-const VERSION = "v1.2.0";
+const VERSION = "v1.3.0";
 
 const SUPABASE_URL = "https://eefycklvsmuqhdckymmw.supabase.co";
 const SUPABASE_KEY = "sb_publishable_FMQM5VuVnpCB2Uy3JR0Hwg_F27EuqfM";
@@ -664,7 +664,7 @@ function Sidebar({ theme, onToggleTheme, view, setView, counts, onSignOut }) {
     <aside className="sidebar">
       <div className="brand">
         <div>
-          <div className="brand-mark">Atelier<em>.</em></div>
+          <div className="brand-mark">LifeOS<em>.</em></div>
           <div className="brand-sub">Jordan · personal OS</div>
           <div className="brand-version">{VERSION}</div>
         </div>
@@ -1617,7 +1617,7 @@ function SignIn({ db }) {
     <div className="loading-screen">
       <form className="card auth-card" onSubmit={submit}>
         <div>
-          <div className="brand-mark">Atelier<em>.</em></div>
+          <div className="brand-mark">LifeOS<em>.</em></div>
           <div className="brand-sub">Sign in to continue</div>
         </div>
         <label className="ed-label" htmlFor="auth-email">Email</label>

@@ -1,6 +1,6 @@
 {
-  "name": "Life Dashboard",
-  "short_name": "Atelier",
+  "name": "LifeOS",
+  "short_name": "LifeOS",
   "description": "Jordan's personal productivity OS",
   "start_url": "/",
   "display": "standalone",
