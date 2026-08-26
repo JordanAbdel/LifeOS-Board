@@ -1,5 +1,10 @@
 # Handoff — overnight session, 2026-08-19
 
+> **Superseded 2026-08-26.** Kept as the record of that session. Everything in
+> "Your queue" below is done: git works, Supabase is active, the account exists,
+> `rls.sql` has been run. The live status is in [`tasks/todo.md`](tasks/todo.md);
+> the current starting point is [`NEXT-CHAT.md`](NEXT-CHAT.md).
+
 Branch: **`lifeos-v1-auth`** (6 commits, nothing pushed, `main` untouched).
 Everything below is on disk and committed. **Nothing has touched Supabase.**
 

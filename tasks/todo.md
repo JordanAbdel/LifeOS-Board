@@ -2,10 +2,14 @@
 
 Plan and architecture decisions: [`tasks/plan.md`](plan.md). Spec: [`PLAN.md`](../PLAN.md).
 
-> **Status 2026-08-19 (overnight session).** Tasks 3, 4 and 5 have their code and
-> SQL written and committed on branch `lifeos-v1-auth`. None of it has touched
-> Supabase: the project is paused and the auth account does not exist, so both are
-> gated on Jordan. See [`HANDOFF.md`](../HANDOFF.md) for the exact order to unblock.
+> **Status 2026-08-26.** Verified against the live project, not from notes.
+> Supabase is active. `tasks` and `research` exist and return `[]` to the anon key,
+> so `rls.sql` has been run — Task 4 is done. `work_events` returns PGRST205, so
+> **`docs/work_events.sql` has not been run** and Task 5 is the one blocker holding
+> up the calendar. Task 8's code is now wired and ships ahead of that SQL: it reads
+> a missing table as "not connected" rather than an error, the same way the sign-in
+> gate shipped ahead of RLS. Task 14 was pulled forward — the app is called LifeOS
+> everywhere now, v1.3.0.
 
 Conventions used below:
 - `SUPABASE_URL` = `https://eefycklvsmuqhdckymmw.supabase.co`, `ANON` = the publishable
@@ -62,7 +66,11 @@ cannot accumulate other accounts.
 
 ---
 
-## Task 3: Add the sign-in gate to `index.html` — ✅ CODE DONE, unverified against a real account
+## Task 3: Add the sign-in gate to `index.html` — ✅ DONE (inferred, not re-run)
+
+> Not re-verified in this session — that needs the account password. But RLS is
+> live on `tasks` and `research`, and the app cannot read a row without a working
+> session, so a successful sign-in has happened at least once.
 
 **Description:** Wrap `App` in an auth gate: `getSession` on load, a minimal
 email/password sign-in form in the existing design language when there is no session,
@@ -86,7 +94,7 @@ automatically once signed in. Ships *before* RLS is enabled so the app never bre
 
 ---
 
-## Task 4: Enable RLS on `tasks` and `research` — ⏸ SQL WRITTEN (`rls.sql`), not run
+## Task 4: Enable RLS on `tasks` and `research` — ✅ DONE 2026-08-26 (confirmed live: anon reads return `[]`)
 
 **Description:** New root-level `rls.sql` (matching the existing flat `schema.sql`
 convention) that enables RLS on both tables and adds `TO authenticated USING (true)
@@ -120,7 +128,12 @@ documenting the old pattern. This is the task that makes the embedded anon key i
 
 ## Phase 2 — Work calendar
 
-## Task 5: Create `work_events` with RLS on from the start — ⏸ SQL WRITTEN, not run
+## Task 5: Create `work_events` with RLS on from the start — ⛔ NEEDS JORDAN: run `docs/work_events.sql`
+
+> This is the single blocker for the whole calendar phase. The SQL is written and
+> correct (RLS enabled, `security_invoker` on the view, no `DISABLE` line). It just
+> needs pasting into the Supabase SQL editor. Task 8's panel is already wired and
+> will light up the moment the table exists.
 
 **Description:** Run `docs/work_events.sql`, with its final line replaced: the file
 currently ends in `DISABLE ROW LEVEL SECURITY` under an explicit "DECISION REQUIRED"
@@ -189,7 +202,7 @@ masquerade as a free day. Update the doc to match what was actually built.
 
 ---
 
-## Task 8: Render the work calendar panel with the staleness banner — 🟡 SHELL BUILT v1.2.0, not wired
+## Task 8: Render the work calendar panel with the staleness banner — ✅ CODE DONE v1.3.0, awaiting Task 5
 
 **Description:** Add a calendar panel to `TodayView` (`index.html:991`) showing today's
 `work_events`, alongside the existing task columns. Fetch `work_events_freshness` in
@@ -207,11 +220,16 @@ this is the panel's main job, not decoration.
 - [ ] Force staleness (temporarily backdate `synced_at` on the newest row) and confirm the banner appears; restore afterwards
 - [ ] Check both viewports in the browser preview; console clean
 
-> `CalendarPanel` exists in `index.html` with all states rendered (loading, not
-> connected, free day, stale+empty, events, stale+events, error) and is fed
-> `{ status: "unconfigured" }` from `Dashboard`. Remaining work is the fetch:
-> today's `work_events` plus `work_events_freshness`, mapped to
-> `{ id, startsAt, allDay, title, location, source }` and `staleHours`.
+> Wired 2026-08-26. `Dashboard` fetches today's `work_events` (bounded by
+> `sydneyMidnightUTC(0)`/`(1)`) and `work_events_freshness` in a dedicated effect,
+> maps rows through `toWorkEvent`, and derives `staleHours` from `last_sync`.
+> A missing table (PGRST205) or a null `last_sync` both report as "not connected"
+> rather than an error or a free day.
+>
+> All seven states were rendered and checked at desktop and mobile widths, and the
+> Sydney day window was checked across both 2026 DST transitions. What is **not**
+> verified is the only thing that needs the table: real rows rendering in real
+> order. Re-run the manual check in this task once Task 5 lands.
 
 **Dependencies:** Task 5 (can be built against hand-inserted rows before Task 6 lands)
 **Files likely touched:** `index.html`
@@ -369,7 +387,7 @@ stored anywhere (spec §1).
 
 ---
 
-## Task 14: Rename Atelier → LifeOS
+## Task 14: Rename Atelier → LifeOS — ✅ DONE 2026-08-26 (pulled forward)
 
 **Description:** The build still identifies as "Life Dashboard" / "Atelier" in the
 `<title>`, `manifest.json` and `apple-mobile-web-app-title` (`index.html:20`). Rename to
@@ -385,7 +403,7 @@ LifeOS, bump `VERSION` (`index.html:459`), and bump the service worker cache key
 - [ ] Hard-reload the deployed app; confirm the new version string renders
 - [ ] Confirm the home-screen icon label updated on the phone
 
-**Dependencies:** Task 13
+**Dependencies:** ~~Task 13~~ — none in practice; pulled forward out of order
 **Files likely touched:** `index.html`, `manifest.json`, `sw.js`
 **Estimated scope:** XS
 
