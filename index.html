@@ -1373,6 +1373,84 @@ function rankInbox(messages, { now = Date.now(), self, limit = 2 } = {}) {
     }));
 }
 
+/* ── Task 12: Gmail payload → normalised message ───────────────────────────
+   The half of the fetch that can be written and checked without a token. The
+   HTTP call is three lines; this is where the bugs are, so it is separated out
+   and exercised against real payload shapes rather than written blind alongside
+   the request.
+
+   Shape per the Message resource: headers are {name, value} pairs under
+   payload.headers, internalDate is epoch milliseconds *as a string*, labelIds
+   is a flat array. Fetched with format=METADATA and metadataHeaders, which
+   returns the payload structure without body data.
+
+   The fetch must request metadataHeaders From, To, Cc, Subject, List-Unsubscribe
+   and Content-Type — the header() calls below are the contract, and a header
+   left out of the request parses as empty rather than failing loudly.
+   Source: https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages
+   Source: https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/get */
+
+/* Header names are case-insensitive and Gmail does not normalise them, so
+   looking one up by exact name silently misses. */
+function header(payload, name) {
+  const want = name.toLowerCase();
+  const hit = ((payload && payload.headers) || []).find(h => (h.name || "").toLowerCase() === want);
+  return hit ? hit.value : "";
+}
+
+/* Splits an address list on commas that actually separate addresses. A display
+   name may legitimately contain one — `"Raman, Priya" <p@x.com>, sam@y.com` is
+   two addresses, not three — so quoted sections and angle brackets are held. */
+function splitAddressList(value) {
+  const out = [];
+  let buf = "", quoted = false, angled = false;
+  for (const ch of value || "") {
+    if (ch === '"' && !angled)                 { quoted = !quoted; buf += ch; continue; }
+    if (ch === "<" && !quoted)                 angled = true;
+    if (ch === ">" && !quoted)                 angled = false;
+    if (ch === "," && !quoted && !angled)      { out.push(buf); buf = ""; continue; }
+    buf += ch;
+  }
+  out.push(buf);
+  return out.map(part => part.trim()).filter(Boolean);
+}
+
+function parseAddress(raw) {
+  const angled = (raw || "").match(/^(.*)<([^>]*)>\s*$/);
+  if (!angled) return { name: "", email: (raw || "").trim().toLowerCase() };
+  const name = angled[1].trim().replace(/^"(.*)"$/, "$1").replace(/\\"/g, '"').trim();
+  return { name, email: angled[2].trim().toLowerCase() };
+}
+
+/* threadLength is passed in rather than derived: a single message cannot know
+   how many siblings it has, and the caller already has the thread grouping from
+   the messages.list response. */
+function toInboxMessage(message, { threadLength = 1 } = {}) {
+  const payload = message.payload || {};
+  const contentType = header(payload, "Content-Type").toLowerCase();
+  const partTypes = ((payload.parts || []).map(part => (part.mimeType || "").toLowerCase()));
+
+  return {
+    id: message.id,
+    threadId: message.threadId,
+    from: parseAddress(header(payload, "From")),
+    to: splitAddressList(header(payload, "To")).map(a => parseAddress(a).email),
+    cc: splitAddressList(header(payload, "Cc")).map(a => parseAddress(a).email),
+    subject: header(payload, "Subject"),
+    snippet: message.snippet || "",
+    /* internalDate is epoch ms as a string. Number() rather than parsing the
+       Date header, which is sender-supplied and can be wrong or absent. */
+    receivedAt: new Date(Number(message.internalDate)).toISOString(),
+    labels: message.labelIds || [],
+    hasListUnsubscribe: Boolean(header(payload, "List-Unsubscribe")),
+    /* An invite is usually multipart with a text/calendar part rather than a
+       top-level text/calendar, so both places are checked. */
+    isCalendarInvite: contentType.includes("text/calendar")
+      || partTypes.some(type => type.includes("text/calendar")),
+    threadLength,
+  };
+}
+
 /* Task 13. Surfaces and explains only — each item taps out to Gmail, nothing is
    read, replied to or stored here (spec §1). No unread count anywhere: the spec
    rejects badges explicitly. */
